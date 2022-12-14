@@ -6,14 +6,19 @@ Query.attach = async (req, res, next) => {
   const data = req.body;
   dev.alias("유저에게 받음").log(data);
 
-  const isLocale = await sql
+  // const isLocale = await sql
+  //   .promise()
+  //   .query(
+  //     `SELECT * FROM locales WHERE region LIKE "${convertRegionName(
+  //       data.locale
+  //     )}%"`
+  //   );
+  // dev.log(isLocale);
+  await sql
     .promise()
     .query(
-      `SELECT * FROM locales WHERE region LIKE "${convertRegionName(
-        data.locale
-      )}%"`
+      `INSERT INTO locales IF NOT EXISTS () VALUES ("${convertRegionName(data.locale)}")`
     );
-  dev.log(isLocale);
 
   res.status(200).json(data);
 };
