@@ -1,0 +1,23 @@
+{
+  "name": "proxy",
+  "version": "1.0.0",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "description": "",
+  "scripts": {
+    "graph": "madge -i graph.svg index.js",
+    "dev:api": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true nodemon index.js",
+    "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run dev:api\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.0.3",
+    "esm": "^3.2.25",
+    "protobufjs": "^7.1.2"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,25 @@
+{
+  "name": "frontend",
+  "version": "1.0.0",
+  "main": "assets/scripts/main.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "description": "",
+  "scripts": {
+    "graph": "madge -i graph.svg assets/scripts/main.js",
+    "dev:api": "cross-env NODE_ENV=development vite -c vite.config.js",
+    "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run dev:api\""
+  },
+  "dependencies": {
+    "axios": "^1.2.1",
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.0.3",
+    "protobufjs": "^7.1.2",
+    "uuid": "^9.0.0",
+    "vite": "^4.0.1"
+  },
+  "devDependencies": {}
+}
