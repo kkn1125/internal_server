@@ -317,7 +317,7 @@ Query.attach = async (req, res, next) => {
 
   for (let i = 0; i < region.length; i++) {
     const locale = region[i];
-    if (locale.limit_amount > locale.count) {
+    if (locale.limit_amount > locale.count && region.length) {
       is_full = false;
       target = locale.id;
     }
