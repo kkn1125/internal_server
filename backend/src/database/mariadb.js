@@ -34,7 +34,7 @@ const connectionHandler = () => {
 let time = 0;
 function keepAlive() {
   // NOTICE: mariadb.js 데이터베이스 유지 위한 ping 보내기 / 김경남 EM
-  console.log(":: ping check ::");
+  // console.log(":: ping check ::");
   if (mariaConnection) {
     mariaConnection.ping((err) => {
       if (err) {
@@ -42,7 +42,7 @@ function keepAlive() {
       }
       // console.log(err);
       time += 5000;
-      console.log("current:", time / 1000, "s / Max:", 600, "s");
+      // console.log("current:", time / 1000, "s / Max:", 600, "s");
     });
   }
 }

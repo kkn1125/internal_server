@@ -9,8 +9,9 @@
   "description": "",
   "scripts": {
     "graph": "madge -i graph.svg assets/scripts/main.js",
+    "style": "CHOKIDAR_USEPOLLING=true sass --watch --no-source-map assets/styles/main.scss:assets/styles/main.css",
     "dev:api": "cross-env NODE_ENV=development vite -c vite.config.js",
-    "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run dev:api\""
+    "dev": "concurrently --kill-others-on-fail \"bun run graph\"  \"bun run style\" \"bun run dev:api\""
   },
   "dependencies": {
     "axios": "^1.2.1",
