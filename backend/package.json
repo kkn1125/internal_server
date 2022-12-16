@@ -21,6 +21,7 @@
     "multer": "^1.4.5-lts.1",
     "mysql2": "^2.3.3",
     "protobufjs": "^7.1.2",
+    "sse": "^0.0.8",
     "uuid": "^9.0.0"
   },
   "devDependencies": {}

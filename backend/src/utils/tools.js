@@ -22,9 +22,20 @@ Object.assign(
       const wrap = function (...arg) {
         value.call(
           console,
-          `🚀 [${dev.preffix || preffix || "DEV"}] `,
+          `🚀 [${dev.preffix || preffix || "DEV"}]\n`,
           ...arg,
-          `(${new Date().toLocaleDateString("ko", {})})`
+          `(${(function () {
+            const time = new Date();
+            const h = time.getHours();
+            const m = time.getMinutes();
+            const s = time.getSeconds();
+            const ms = time.getMilliseconds();
+            return `${h.toString().padStart(2, "0")}:${m
+              .toString()
+              .padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms
+              .toString()
+              .padStart(3, "0")}`;
+          })()})`
         );
         dev.preffix = "";
       };

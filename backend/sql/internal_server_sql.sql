@@ -183,28 +183,107 @@ ENGINE = InnoDB;
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
-
-select locales.id as l_id,
-	pool_sockets.id as ps_id,
-	pool_publishers.id as pp_id,
-    spaces.id as s_id,
-    channels.id as ch_id,
-    users.id as u_id,
+use internal_server;
+SELECT 
+    locales.id AS l_id,
+    pool_sockets.id AS ps_id,
+    pool_publishers.id AS pp_id,
+    spaces.id AS s_id,
+    channels.id AS ch_id,
+    users.id AS u_id,
     connection.*,
     allocation.*
-from users
-left join allocation
-on users.id = allocation.user_id
-left join connection
-on users.id = connection.user_id
-left join locales
-on locales.id = connection.locale_id
-left join pool_sockets
-on pool_sockets.id = connection.socket_id
-left join pool_publishers
-on pool_publishers.id = connection.publisher_id
-left join spaces
-on spaces.id = allocation.space_id
-left join channels
-on channels.id = allocation.channel_id
-group by allocation.channel_id, connection.socket_id;
+FROM
+    users
+        LEFT JOIN
+    allocation ON users.id = allocation.user_id
+        LEFT JOIN
+    connection ON users.id = connection.user_id
+        LEFT JOIN
+    locales ON locales.id = connection.locale_id
+        LEFT JOIN
+    pool_sockets ON pool_sockets.id = connection.socket_id
+        LEFT JOIN
+    pool_publishers ON pool_publishers.id = connection.publisher_id
+        LEFT JOIN
+    spaces ON spaces.id = allocation.space_id
+        LEFT JOIN
+    channels ON channels.id = allocation.channel_id
+GROUP BY allocation.channel_id , connection.socket_id;
+
+SELECT 
+    *,
+    COUNT(connection.socket_id)
+FROM
+    locales
+        LEFT JOIN
+    connection ON locales.id = connection.locale_id
+GROUP BY locales.id;
+
+SELECT 
+    *, COUNT(*) AS user_count
+FROM
+    connection
+GROUP BY locale_id;
+
+SELECT 
+    locales.*,
+    COUNT(DISTINCT (pool_sockets.id)) AS socket_count,
+    COUNT(users.id) AS user_count
+FROM
+    locales
+        LEFT JOIN
+    connection ON locales.id = connection.locale_id
+        LEFT JOIN
+    pool_sockets ON connection.socket_id = pool_sockets.id
+        LEFT JOIN
+    users ON users.id = connection.user_id
+WHERE
+    locales.region LIKE 'southKorea%'
+GROUP BY locales.id;
+
+SELECT 
+    *
+FROM
+    connection order by locale_id, socket_id;
+    
+SELECT 
+    space_id, channel_id
+FROM
+    allocation
+WHERE
+    user_id = (SELECT 
+            id
+        FROM
+            users
+        WHERE
+            uuid = '2546cb2c-15ac-4ba4-9eea-a845861abe36');
+
+SELECT 
+    allocation.space_id, allocation.channel_id, users.*
+FROM
+    allocation
+        LEFT JOIN
+    users ON allocation.user_id = users.id
+WHERE
+    channel_id = (SELECT 
+            allocation.channel_id
+        FROM
+            users
+                LEFT JOIN
+            allocation ON users.id = allocation.user_id
+        WHERE
+            users.uuid = 'c69c8cb3-a522-4a12-a2ae-96cd6e3cf484');
+            
+SELECT 
+    channels.*,
+    COUNT(*) AS count,
+    COUNT(*) >= channels.limit_amount AS is_full
+FROM
+    channels
+        LEFT JOIN
+    allocation ON channels.id = allocation.channel_id
+        LEFT JOIN
+    users ON allocation.user_id = users.id
+WHERE
+    allocation.user_id = users.id;
