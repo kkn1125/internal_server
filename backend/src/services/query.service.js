@@ -233,17 +233,25 @@ async function autoInsertUser(data, locale, dataMap) {
   /* 비어있는 풀 소켓, 퍼블리셔 조회 끝 */
 
   /* 채널, 공간 존재 여부 조회 시작 */
+  const [readChannel] = await sql.promise().query(`
+    SHOW TABLE STATUS WHERE name = 'channels'
+  `);
+  const channelIncrement = readChannel[0].Auto_increment;
   const [isExistsChannel] = await sql.promise().query(
-    `SELECT
+    `SELECT 
       channels.*,
       COUNT(*) AS count,
       COUNT(*) >= channels.limit_amount AS is_full
-    FROM channels
-    LEFT JOIN allocation
-    ON channels.id = allocation.channel_id
-    LEFT JOIN users
-    ON allocation.user_id = users.id
-    WHERE allocation.user_id = users.id`
+    FROM
+      channels
+        LEFT JOIN
+      allocation ON channels.id = allocation.channel_id
+        LEFT JOIN
+      users ON allocation.user_id = users.id
+    WHERE
+      allocation.user_id = users.id
+    GROUP BY
+      channels.id`
   );
 
   const [isExistsSpace] = await sql.promise().query(
@@ -274,25 +282,17 @@ async function autoInsertUser(data, locale, dataMap) {
   }
 
   if (observers.channel.is_full) {
-    dev
-      .alias("channel create")
-      .log((isExistsChannel[isExistsChannel.length - 1]?.id || 0) + 1);
+    dev.alias("channel create").log(channelIncrement || 0);
     await sql.promise().query(
       `INSERT INTO channels
       (name, limit_amount)
       VALUES (?, ?)`,
-      [
-        `channel${(isExistsChannel[isExistsChannel.length - 1]?.id || 0) + 1}`,
-        options.limit.channels,
-      ]
+      [`channel${channelIncrement || 0}`, options.limit.channels]
     );
-    observers.channel.target =
-      (isExistsChannel[isExistsChannel.length - 1]?.id || 0) + 1;
+    observers.channel.target = channelIncrement || 0;
     dataMap.channel = Object.assign(dataMap.channel || {}, {
-      pk: (isExistsChannel[isExistsChannel.length - 1]?.id || 0) + 1,
-      name: `channel${
-        (isExistsChannel[isExistsChannel.length - 1]?.id || 0) + 1
-      }`,
+      pk: channelIncrement || 0,
+      name: `channel${channelIncrement || 0}`,
       limit_amount: options.limit.channels,
     });
   }
@@ -392,7 +392,6 @@ Query.attach = async (req, res, next) => {
   const data = req.body;
   const dataMap = {};
   /* copy user request data */
-  // dataMap = new Map(Array.from(dataMap).concat(Object.entries(data)));
   dataMap.user = Object.assign(dataMap.user || {}, {
     uuid: data.uuid,
     email: data.email,
@@ -457,12 +456,92 @@ Query.attach = async (req, res, next) => {
   }
 
   await autoInsertUser(data, target, dataMap);
+
   res.status(200).json(dataMap);
 };
 
 Query.login = async (req, res, next) => {
-  const data = await sql.promise().query(`SELECT 1`);
-  console.log(data);
+  const data = req.body;
+  const { uuid, nickname, password, pox, poy, poz, roy } = data;
+
+  const [readUser] = await sql.promise().query(
+    `SELECT
+      id
+    FROM
+      users
+    WHERE
+      uuid = '${data.uuid}'`
+  );
+
+  const { id: user_id } = readUser[0] || {};
+
+  const [allocationInfo] = await sql.promise().query(
+    `SELECT 
+    space_id, channel_id
+    FROM
+    allocation
+    WHERE
+    user_id = ?`,
+    [user_id]
+  );
+
+  const { space_id, channel_id } = allocationInfo[0] || {};
+
+  await sql.promise().query(
+    `UPDATE users
+      SET nickname=?, password=?
+      WHERE uuid=?`,
+    [nickname, password, uuid]
+  );
+
+  await sql.promise().query(
+    `UPDATE allocation
+    SET type='player'
+    WHERE user_id = ? AND space_id = ? AND channel_id = ?`,
+    [user_id, space_id, channel_id]
+  );
+
+  await sql.promise().query(
+    `INSERT INTO locations (space_id, channel_id, user_id, pox, poy, poz, roy)
+    VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [space_id, channel_id, user_id, pox, poy, poz, roy]
+  );
+
+  const [readPlayers] = await sql.promise().query(
+    `SELECT 
+      users.uuid,
+      users.nickname,
+      locations.space_id,
+      locations.channel_id,
+      locations.pox,
+      locations.poy,
+      locations.poz,
+      locations.roy
+    FROM
+      allocation
+        LEFT JOIN
+      users ON allocation.user_id = users.id
+        LEFT JOIN
+      locations ON allocation.user_id = locations.user_id
+    WHERE
+      allocation.channel_id = (SELECT 
+        allocation.channel_id
+      FROM
+        users
+          LEFT JOIN
+        allocation ON users.id = allocation.user_id
+      WHERE
+        users.uuid = '${uuid}')
+      AND allocation.type = 'player'`
+  );
+
+  // const data = await sql.promise().query(`SELECT 1`);
+  res.status(200).json({
+    ok: true,
+    uuid: uuid,
+    type: "login",
+    players: readPlayers,
+  });
 };
 
 Query.logout = async (req, res, next) => {
@@ -470,9 +549,32 @@ Query.logout = async (req, res, next) => {
   console.log(data);
 };
 
+Query.updateLocation = async (req, res, next) => {
+  const { uuid, pox, poy, poz, roy, channel, space } = req.body;
+  const [updated, a, b] = await sql.promise().query(
+    `UPDATE locations
+    SET pox=?, poy=?, poz=?, roy=?
+    WHERE
+      user_id = (
+        SELECT id
+        FROM users
+        WHERE uuid = ?
+      )
+    AND
+      channel_id = ?
+    AND
+      space_id = ?`,
+    [pox, poy, poz, roy, uuid, channel, space]
+  );
+  res.status(200).json({
+    ok: true,
+  });
+};
+
 Query.players = async (req, res, next) => {
   const data = req.body;
-  console.log(data);
+  // console.log(data);
+
   const [allocationInfo] = await sql.promise().query(
     `SELECT 
       space_id, channel_id
@@ -484,30 +586,47 @@ Query.players = async (req, res, next) => {
         FROM
           users
         WHERE
-          uuid = '2546cb2c-15ac-4ba4-9eea-a845861abe36')`
+          uuid = '${data.uuid}')`
   );
+
   const { space_id, channel_id } = allocationInfo[0] || {};
+
   const [readPlayers] = await sql.promise().query(
     `SELECT 
-      users.*
+      users.uuid,
+      users.nickname,
+      locations.space_id,
+      locations.channel_id,
+      locations.pox,
+      locations.poy,
+      locations.poz,
+      locations.roy
     FROM
       allocation
         LEFT JOIN
       users ON allocation.user_id = users.id
+        LEFT JOIN
+      locations ON allocation.user_id = locations.user_id
     WHERE
-      channel_id = (SELECT 
+      allocation.channel_id = (SELECT 
         allocation.channel_id
       FROM
         users
           LEFT JOIN
         allocation ON users.id = allocation.user_id
       WHERE
-        users.uuid = '${data.uuid}')
+        users.uuid = '${data.uuid}'
+      AND
+        allocation.space_id = '${space_id}'
+      AND
+        allocation.channel_id = '${channel_id}'
+      )
       AND allocation.type = 'player'`
   );
 
   res.status(200).json({
     ok: true,
+    type: "attach",
     space_id,
     channel_id,
     players: readPlayers,

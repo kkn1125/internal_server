@@ -42,25 +42,25 @@ const server = app.listen(port, () => {
   console.log("listening on port " + port);
 });
 
-const sse = new SSE(server);
+// const sse = new SSE(server);
 
-sse.on("connection", (client) => {
-  setInterval(async () => {
-    const locales = await queryService.findLocales();
-    const sockets = await queryService.findPoolSockets();
-    const publishers = await queryService.findPoolPublishers();
-    const spaces = await queryService.findSpaces();
-    const channels = await queryService.findChannels();
-    const users = await queryService.findUsers();
-    client.send(
-      JSON.stringify({
-        locales,
-        sockets,
-        publishers,
-        spaces,
-        channels,
-        users,
-      })
-    );
-  }, 1000);
-});
+// sse.on("connection", (client) => {
+//   setInterval(async () => {
+//     const locales = await queryService.findLocales();
+//     const sockets = await queryService.findPoolSockets();
+//     const publishers = await queryService.findPoolPublishers();
+//     const spaces = await queryService.findSpaces();
+//     const channels = await queryService.findChannels();
+//     const users = await queryService.findUsers();
+//     client.send(
+//       JSON.stringify({
+//         locales,
+//         sockets,
+//         publishers,
+//         spaces,
+//         channels,
+//         users,
+//       })
+//     );
+//   }, 1000);
+// });

@@ -18,4 +18,8 @@ queryRouter.post("/players", (req, res, next) => {
   queryService.players(req, res, next);
 });
 
+queryRouter.post("/locations", (req, res, next) => {
+  queryService.updateLocation(req, res, next);
+});
+
 export default queryRouter;

@@ -6,12 +6,13 @@ import protobufjs from "protobufjs";
 
 const { Message, Field } = protobufjs;
 
-Field.d(1, "fixed32", "required")(Message.prototype, "id");
-Field.d(2, "string", "required")(Message.prototype, "nickname");
-Field.d(3, "float", "required")(Message.prototype, "pox");
-Field.d(4, "float", "required")(Message.prototype, "poy");
-Field.d(5, "float", "required")(Message.prototype, "poz");
-Field.d(6, "float", "required")(Message.prototype, "roy");
+Field.d(1, "string", "required")(Message.prototype, "uuid");
+Field.d(2, "int32", "required")(Message.prototype, "space");
+Field.d(3, "int32", "required")(Message.prototype, "channel");
+Field.d(5, "float", "required")(Message.prototype, "pox");
+Field.d(6, "float", "required")(Message.prototype, "poy");
+Field.d(7, "float", "required")(Message.prototype, "poz");
+Field.d(8, "float", "required")(Message.prototype, "roy");
 
 const __dirname = path.resolve();
 const mode = process.env.NODE_ENV;
@@ -28,6 +29,8 @@ const port = Number(process.env.PORT) || 10000;
 const apiHost = process.env.API_HOST;
 const apiPort = Number(process.env.API_PORT) || 3000;
 const users = new Map();
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 
 const app = uWs
   ./*SSL*/ App(/* {
@@ -61,9 +64,12 @@ const app = uWs
       );
     },
     open: (ws) => {
-      users.set(ws, {
-        token: ws.token,
-      });
+      users.set(
+        ws,
+        Object.assign(users.get(ws) || {}, {
+          token: ws.token,
+        })
+      );
       console.log("A WebSocket connected with URL: " + ws.url);
       axios
         .post(`http://${apiHost}:${apiPort}/query/players`, {
@@ -81,16 +87,46 @@ const app = uWs
           );
           ws.subscribe("broadcast");
           ws.subscribe(`${data.space_id}_${data.channel_id}`);
-          app.publish(String(data.channel_id), JSON.stringify(data.players));
+          app.publish(
+            `${data.space_id}_${data.channel_id}`,
+            JSON.stringify(data.players)
+          );
         });
     },
     message: (ws, message, isBinary) => {
       /* Ok is false if backpressure was built up, wait for drain */
+      const me = users.get(ws);
       if (isBinary) {
-        const me = users.get(ws);
-        app.publish(`${me.space}_${me.channel}`, message);
+        const locationJson = Message.decode(new Uint8Array(message)).toJSON();
+        axios.post(
+          `http://${apiHost}:${apiPort}/query/locations`,
+          locationJson
+        );
+        console.log(`${me.space}_${me.channel}`);
+        app.publish(`${me.space}_${me.channel}`, message, isBinary, true);
       } else {
-        let ok = ws.send(message, isBinary);
+        const strings = decoder.decode(message);
+        const json = JSON.parse(strings);
+        if (json.type === "login") {
+          axios
+            .post(`http://${apiHost}:${apiPort}/query/login`, {
+              uuid: json.uuid,
+              nickname: json.nickname,
+              password: json.password,
+              pox: json.pox,
+              poy: json.poy,
+              poz: json.poz,
+              roy: json.roy,
+            })
+            .then((result) => {
+              const { data } = result;
+              ws.send(JSON.stringify(data));
+              app.publish(
+                `${me.space}_${me.channel}`,
+                JSON.stringify(data.players)
+              );
+            });
+        }
       }
     },
     drain: (ws) => {

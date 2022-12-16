@@ -179,6 +179,38 @@ CREATE TABLE IF NOT EXISTS `internal_server`.`sync` (
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
+-- -----------------------------------------------------
+-- Table `internal_server`.`locations`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `internal_server`.`locations` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `channel_id` INT NOT NULL,
+  `space_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `pox` FLOAT NOT NULL DEFAULT 0,
+  `poy` FLOAT NOT NULL DEFAULT 0,
+  `poz` FLOAT NOT NULL DEFAULT 0,
+  `roy` FLOAT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  INDEX `fk_locations_allocation1_idx` (`channel_id` ASC) VISIBLE,
+  INDEX `fk_locations_allocation2_idx` (`space_id` ASC) VISIBLE,
+  INDEX `fk_locations_allocation3_idx` (`user_id` ASC) VISIBLE,
+  CONSTRAINT `fk_locations_allocation1`
+    FOREIGN KEY (`channel_id`)
+    REFERENCES `internal_server`.`allocation` (`channel_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_locations_allocation2`
+    FOREIGN KEY (`space_id`)
+    REFERENCES `internal_server`.`allocation` (`space_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_locations_allocation3`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `internal_server`.`allocation` (`user_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE)
+ENGINE = InnoDB;
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
@@ -273,7 +305,8 @@ WHERE
                 LEFT JOIN
             allocation ON users.id = allocation.user_id
         WHERE
-            users.uuid = 'c69c8cb3-a522-4a12-a2ae-96cd6e3cf484');
+            users.uuid = 'cd8c1a34-a1f4-4a4a-8cfa-121c5f3f04ba')
+        AND allocation.type = 'player';
             
 SELECT 
     channels.*,
