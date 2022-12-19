@@ -1,16 +1,16 @@
 {
   "name": "socket",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "ecosystem.config.js",
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "description": "",
   "scripts": {
     "graph": "madge -i graph.svg index.js",
     "dev:api": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true nodemon index.js",
-    "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run dev:api\""
+    "start": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true pm2 start --watch ecosystem.config.js",
+    "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run start\""
   },
   "dependencies": {
     "axios": "^1.2.1",
@@ -18,7 +18,10 @@
     "cross-env": "^7.0.3",
     "dotenv": "^16.0.3",
     "esm": "^3.2.25",
+    "mysql2": "^2.3.3",
+    "pm2": "^5.2.2",
     "protobufjs": "^7.1.2",
-    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.15.0"
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.15.0",
+    "ws": "^8.11.0"
   }
 }

@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS `internal_server`.`users` (
   `nickname` VARCHAR(45) NOT NULL,
   `deletion` TINYINT NOT NULL DEFAULT 0,
   `limit_amount` VARCHAR(45) NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`))
 ENGINE = InnoDB;
 
@@ -179,32 +181,21 @@ CREATE TABLE IF NOT EXISTS `internal_server`.`sync` (
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
+
 -- -----------------------------------------------------
 -- Table `internal_server`.`locations`
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `internal_server`.`locations` (
   `id` INT NOT NULL AUTO_INCREMENT,
-  `channel_id` INT NOT NULL,
-  `space_id` INT NOT NULL,
   `user_id` INT NOT NULL,
+  `space_id` INT NOT NULL,
+  `channel_id` INT NOT NULL,
   `pox` FLOAT NOT NULL DEFAULT 0,
   `poy` FLOAT NOT NULL DEFAULT 0,
   `poz` FLOAT NOT NULL DEFAULT 0,
   `roy` FLOAT NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  INDEX `fk_locations_allocation1_idx` (`channel_id` ASC) VISIBLE,
-  INDEX `fk_locations_allocation2_idx` (`space_id` ASC) VISIBLE,
   INDEX `fk_locations_allocation3_idx` (`user_id` ASC) VISIBLE,
-  CONSTRAINT `fk_locations_allocation1`
-    FOREIGN KEY (`channel_id`)
-    REFERENCES `internal_server`.`allocation` (`channel_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_locations_allocation2`
-    FOREIGN KEY (`space_id`)
-    REFERENCES `internal_server`.`allocation` (`space_id`)
-    ON DELETE CASCADE
-    ON UPDATE CASCADE,
   CONSTRAINT `fk_locations_allocation3`
     FOREIGN KEY (`user_id`)
     REFERENCES `internal_server`.`allocation` (`user_id`)
@@ -212,9 +203,13 @@ CREATE TABLE IF NOT EXISTS `internal_server`.`locations` (
     ON UPDATE CASCADE)
 ENGINE = InnoDB;
 
+
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+
+
 use internal_server;
 SELECT 
     locales.id AS l_id,
@@ -240,39 +235,39 @@ FROM
         LEFT JOIN
     spaces ON spaces.id = allocation.space_id
         LEFT JOIN
-    channels ON channels.id = allocation.channel_id
-GROUP BY allocation.channel_id , connection.socket_id;
+    channels ON channels.id = allocation.channel_id;
+#GROUP BY allocation.channel_id , connection.socket_id;
 
-SELECT 
-    *,
-    COUNT(connection.socket_id)
-FROM
-    locales
-        LEFT JOIN
-    connection ON locales.id = connection.locale_id
-GROUP BY locales.id;
+# SELECT 
+#     *,
+#     COUNT(connection.socket_id)
+# FROM
+#     locales
+#         LEFT JOIN
+#     connection ON locales.id = connection.locale_id
+# GROUP BY locales.id;
 
-SELECT 
-    *, COUNT(*) AS user_count
-FROM
-    connection
-GROUP BY locale_id;
+# SELECT 
+#     *, COUNT(*) AS user_count
+# FROM
+#     connection
+# GROUP BY locale_id;
 
-SELECT 
-    locales.*,
-    COUNT(DISTINCT (pool_sockets.id)) AS socket_count,
-    COUNT(users.id) AS user_count
-FROM
-    locales
-        LEFT JOIN
-    connection ON locales.id = connection.locale_id
-        LEFT JOIN
-    pool_sockets ON connection.socket_id = pool_sockets.id
-        LEFT JOIN
-    users ON users.id = connection.user_id
-WHERE
-    locales.region LIKE 'southKorea%'
-GROUP BY locales.id;
+# SELECT 
+#     locales.*
+#     #COUNT(DISTINCT (pool_sockets.id)) AS socket_count,
+#     #COUNT(users.id) AS user_count
+# FROM
+#     locales
+#         LEFT JOIN
+#     connection ON locales.id = connection.locale_id
+#         LEFT JOIN
+#     pool_sockets ON connection.socket_id = pool_sockets.id
+#         LEFT JOIN
+#     users ON users.id = connection.user_id
+# WHERE
+#     locales.region LIKE 'southKorea%'
+# GROUP BY locales.id;
 
 SELECT 
     *
@@ -307,16 +302,16 @@ WHERE
         WHERE
             users.uuid = 'cd8c1a34-a1f4-4a4a-8cfa-121c5f3f04ba')
         AND allocation.type = 'player';
-            
-SELECT 
-    channels.*,
-    COUNT(*) AS count,
-    COUNT(*) >= channels.limit_amount AS is_full
-FROM
-    channels
-        LEFT JOIN
-    allocation ON channels.id = allocation.channel_id
-        LEFT JOIN
-    users ON allocation.user_id = users.id
-WHERE
-    allocation.user_id = users.id;
+select * from locations;
+# SELECT 
+#     channels.*,
+#     COUNT(*) AS count,
+#     COUNT(*) >= channels.limit_amount AS is_full
+# FROM
+#     channels
+#         LEFT JOIN
+#     allocation ON channels.id = allocation.channel_id
+#         LEFT JOIN
+#     users ON allocation.user_id = users.id
+# WHERE
+#     allocation.user_id = users.id;

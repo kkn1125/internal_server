@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(formDataMiddleWare.any());
 
-app.use(logger);
+// app.use(logger);
 app.use("/query", queryController);
 
 app.get("/sse", (req, res, next) => {});

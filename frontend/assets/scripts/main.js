@@ -6,13 +6,16 @@ import protobufjs from "protobufjs";
 /* Communication Parts */
 const { Message, Field } = protobufjs;
 
-Field.d(1, "string", "required")(Message.prototype, "uuid");
-Field.d(2, "int32", "required")(Message.prototype, "space");
-Field.d(3, "int32", "required")(Message.prototype, "channel");
-Field.d(5, "float", "required")(Message.prototype, "pox");
-Field.d(6, "float", "required")(Message.prototype, "poy");
-Field.d(7, "float", "required")(Message.prototype, "poz");
-Field.d(8, "float", "required")(Message.prototype, "roy");
+// Field.d(1, "string", "optional")(Message.prototype, "uuid");
+Field.d(1, "float", "required")(Message.prototype, "id");
+// Field.d(2, "int32", "required")(Message.prototype, "space");
+// Field.d(3, "int32", "required")(Message.prototype, "channel");
+Field.d(2, "float", "required")(Message.prototype, "pox");
+Field.d(3, "float", "required")(Message.prototype, "poy");
+Field.d(4, "float", "required")(Message.prototype, "poz");
+Field.d(5, "float", "required")(Message.prototype, "roy");
+
+const packetLength = 25;
 
 const host = import.meta.env.VITE_API_HOST;
 const port = import.meta.env.VITE_API_PORT;
@@ -22,7 +25,7 @@ const sockets = new Map();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-let users = [];
+let users = new Map();
 const usersMap = new Map();
 const app = document.querySelector("#app");
 const ctx = app.getContext("2d");
@@ -66,7 +69,7 @@ window.addEventListener("click", (e) => {
     sockets.get(attachUserData.uuid).send(
       JSON.stringify({
         type: "login",
-        uuid: attachUserData.uuid,
+        pk: attachUserData.pk,
         nickname,
         password,
         pox: app.width / 2 - SIZE.user.x / 2,
@@ -87,14 +90,27 @@ window.addEventListener("load", () => {
       console.log(data);
       sockets.set(
         data.user.uuid,
-        connectSocket(data.socket.ip, data.socket.port, attachUserData.uuid)
+        connectSocket(
+          data.socket.ip,
+          data.socket.port,
+          attachUserData.uuid,
+          data.space.pk,
+          data.channel.pk,
+          data.user.pk
+        )
       );
+      attachUserData.pk = data.user.pk;
+      for (let u of data.players) {
+        users.set(u.id, u);
+      }
       document.body.insertAdjacentHTML("afterbegin", loginEl);
     });
 });
 
-function connectSocket(ip, port, uuid) {
-  const socket = new WebSocket(`ws://${ip}:${port}/?csrftoken=${uuid}`);
+function connectSocket(ip, port, uuid, space, channel, pk) {
+  const socket = new WebSocket(
+    `ws://${ip}:${port}/?csrftoken=${uuid}&space=${space}&channel=${channel}&pk=${pk}`
+  );
   socket.binaryType = "arraybuffer";
   socket.onopen = (e) => {
     dev.alias("Socket").log("open");
@@ -104,32 +120,69 @@ function connectSocket(ip, port, uuid) {
     const { data } = message;
     dev.alias("Socket Message").log(message);
     if (data instanceof ArrayBuffer) {
-      for (let i = 0; i < users.length / 2; i++) {
-        const user = Message.decode(new Uint8Array(data)).toJSON();
-        const user1 = users[i];
-        const user2 = users[users.length - 1 - i];
-        if (user1.uuid === user.uuid) {
-          user1.pox = user.pox;
-          user1.poy = user.poy;
-          user1.poz = user.poz;
-          user1.roy = user.roy;
-        }
-        if (user1 !== user2) {
-          if (user2.uuid === user.uuid) {
-            user2.pox = user.pox;
-            user2.poy = user.poy;
-            user2.poz = user.poz;
-            user2.roy = user.roy;
-          }
+      for (let i = 0; i < Math.round(data.byteLength / packetLength); i++) {
+        try {
+          const json = Message.decode(
+            new Uint8Array(
+              data.slice(i * packetLength, i * packetLength + packetLength)
+            )
+          ).toJSON();
+          users.set(json.id, Object.assign(users.get(json.id), json));
+          // for (let user1 of users.values()) {
+          //   const json = Message.decode(
+          //     new Uint8Array(
+          //       data.slice(i * packetLength, i * packetLength + packetLength)
+          //     )
+          //   ).toJSON();
+          //   if (user1.id === json.id) {
+          //     Object.assign(user1, json);
+          //     break;
+          //   } else {
+          //     continue;
+          //   }
+          // }
+          // for (let i = 0; i < users.length / 2; i++) {
+          //   // const user = Message.decode(new Uint8Array(data)).toJSON();
+          //   const user1 = users[i];
+          //   const user2 = users[users.length - 1 - i];
+          //   if (user1.id === user.id) {
+          //     user1.pox = user.pox;
+          //     user1.poy = user.poy;
+          //     user1.poz = user.poz;
+          //     user1.roy = user.roy;
+          //     break;
+          //   }
+          //   if (user1 !== user2) {
+          //     if (user2.id === user.id) {
+          //       user2.pox = user.pox;
+          //       user2.poy = user.poy;
+          //       user2.poz = user.poz;
+          //       user2.roy = user.roy;
+          //       break;
+          //     }
+          //   }
+          // }
+        } catch (e) {
+          console.error(e);
         }
       }
     } else {
       const json = JSON.parse(data);
       console.log(json);
       if (json instanceof Array) {
-        users = json;
+        const newMap = new Map();
+        for (let u of json) {
+          newMap.set(u.id, u);
+        }
+        users = newMap;
+        // users = json;
       } else if (json.type === "login") {
-        users = json.players;
+        const newMap = new Map();
+        for (let u of json.players) {
+          newMap.set(u.id, u);
+        }
+        users = newMap;
+        // users = json.players;
       }
     }
   };
@@ -143,6 +196,31 @@ function connectSocket(ip, port, uuid) {
   };
   socket.onclose = (e) => {
     dev.alias("Socket").log("close");
+    axios
+      .post(`http://${host}:${port}/query/enter`, attachUserData)
+      .then((result) => {
+        const { data } = result;
+        console.log(data);
+        sockets.set(
+          data.user.uuid,
+          connectSocket(
+            data.socket.ip,
+            data.socket.port,
+            attachUserData.uuid,
+            data.space.pk,
+            data.channel.pk,
+            data.user.pk
+          )
+        );
+        attachUserData.pk = data.user.pk;
+        const newMap = new Map();
+        for (let u of data.players) {
+          newMap.set(u.id, u);
+        }
+        users = newMap;
+        // users = data.players;
+        document.body.insertAdjacentHTML("afterbegin", loginEl);
+      });
   };
   return socket;
 }
@@ -176,59 +254,106 @@ function clearScene() {
 }
 
 function userUpdate() {
-  for (let i = 0; i < users.length / 2; i++) {
-    const user1 = users[i];
-    const user2 = users[users.length - 1 - i];
-    ctx.fillRect(user1.pox, user1.poy, SIZE.user.x, SIZE.user.y);
+  // for (let i = 0; i < users.length / 2; i++) {
+  //   const user1 = users[i];
+  //   const user2 = users[users.length - 1 - i];
+  //   ctx.fillRect(user1.pox, user1.poy, SIZE.user.x, SIZE.user.y);
 
-    if (user1 !== user2) {
-      ctx.fillRect(user2.pox, user2.poy, SIZE.user.x, SIZE.user.y);
-    }
+  //   if (user1 !== user2) {
+  //     ctx.fillRect(user2.pox, user2.poy, SIZE.user.x, SIZE.user.y);
+  //   }
+  // }
+  for (let u of users.values()) {
+    ctx.fillRect(u.pox, u.poy, SIZE.user.x, SIZE.user.y);
   }
 }
 
 function moving(time) {
-  for (let i = 0; i < users.length / 2; i++) {
-    const user1 = users[i];
-    const user2 = users[users.length - 1 - i];
-    if (user1.uuid == attachUserData.uuid) {
+  // for (let i = 0; i < users.length / 2; i++) {
+  //   const user1 = users[i];
+  //   const user2 = users[users.length - 1 - i];
+  //   if (user1.uuid == attachUserData.uuid) {
+  //     if (direction.w || direction.s || direction.a || direction.d) {
+  //       if (direction.w) {
+  //         user1.poy -= SPEED;
+  //       }
+  //       if (direction.s) {
+  //         user1.poy += SPEED;
+  //       }
+  //       if (direction.a) {
+  //         user1.pox -= SPEED;
+  //       }
+  //       if (direction.d) {
+  //         user1.pox += SPEED;
+  //       }
+  //       updateLocation(user1);
+  //     }
+  //     break;
+  //   }
+  //   if (user1 !== user2) {
+  //     if (user2.uuid == attachUserData.uuid) {
+  //       if (direction.w || direction.s || direction.a || direction.d) {
+  //         if (direction.w) {
+  //           user2.poy -= SPEED;
+  //         }
+  //         if (direction.s) {
+  //           user2.poy += SPEED;
+  //         }
+  //         if (direction.a) {
+  //           user2.pox -= SPEED;
+  //         }
+  //         if (direction.d) {
+  //           user2.pox += SPEED;
+  //         }
+  //         updateLocation(user2);
+  //       }
+  //       break;
+  //     }
+  //   }
+  // }
+  for (let u of users.values()) {
+    if (u.uuid == attachUserData.uuid) {
       if (direction.w || direction.s || direction.a || direction.d) {
         if (direction.w) {
-          user1.poy -= SPEED;
+          Object.assign(u, { poy: u.poy - SPEED });
+          // u.poy -= SPEED;
         }
         if (direction.s) {
-          user1.poy += SPEED;
+          Object.assign(u, { poy: u.poy + SPEED });
+          // u.poy += SPEED;
         }
         if (direction.a) {
-          user1.pox -= SPEED;
+          Object.assign(u, { pox: u.pox - SPEED });
+          // u.pox -= SPEED;
         }
         if (direction.d) {
-          user1.pox += SPEED;
+          Object.assign(u, { pox: u.pox + SPEED });
+          // u.pox += SPEED;
         }
-        updateLocation(user1);
+        updateLocation(u);
       }
       break;
     }
-    if (user1 !== user2) {
-      if (user2.uuid == attachUserData.uuid) {
-        if (direction.w || direction.s || direction.a || direction.d) {
-          if (direction.w) {
-            user2.poy -= SPEED;
-          }
-          if (direction.s) {
-            user2.poy += SPEED;
-          }
-          if (direction.a) {
-            user2.pox -= SPEED;
-          }
-          if (direction.d) {
-            user2.pox += SPEED;
-          }
-          updateLocation(user2);
-        }
-        break;
-      }
-    }
+    // if (user1 !== user2) {
+    //   if (user2.uuid == attachUserData.uuid) {
+    //     if (direction.w || direction.s || direction.a || direction.d) {
+    //       if (direction.w) {
+    //         user2.poy -= SPEED;
+    //       }
+    //       if (direction.s) {
+    //         user2.poy += SPEED;
+    //       }
+    //       if (direction.a) {
+    //         user2.pox -= SPEED;
+    //       }
+    //       if (direction.d) {
+    //         user2.pox += SPEED;
+    //       }
+    //       updateLocation(user2);
+    //     }
+    //     break;
+    //   }
+    // }
   }
 }
 
@@ -236,9 +361,9 @@ function updateLocation(user) {
   sockets.get(attachUserData.uuid).send(
     Message.encode(
       new Message({
-        uuid: user.uuid,
-        space: user.space_id,
-        channel: user.channel_id,
+        id: user.id,
+        // space: user.space_id,
+        // channel: user.channel_id,
         pox: user.pox,
         poy: user.poy,
         poz: user.poz,

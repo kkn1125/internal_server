@@ -12,32 +12,32 @@
 <!-- index.js -->
 <g id="node1" class="node">
 <title>index.js</title>
-<path fill="none" stroke="#254bd7" d="M51,-40C51,-40 7,-40 7,-40 3.5,-40 0,-36.5 0,-33 0,-33 0,-26 0,-26 0,-22.5 3.5,-19 7,-19 7,-19 51,-19 51,-19 54.5,-19 58,-22.5 58,-26 58,-26 58,-33 58,-33 58,-36.5 54.5,-40 51,-40"/>
-<text text-anchor="middle" x="29" y="-26.4" font-family="Arial" font-size="12.00" fill="#254bd7">index.js</text>
+<path fill="none" stroke="#254bd7" d="M51,-60C51,-60 7,-60 7,-60 3.5,-60 0,-56.5 0,-53 0,-53 0,-46 0,-46 0,-42.5 3.5,-39 7,-39 7,-39 51,-39 51,-39 54.5,-39 58,-42.5 58,-46 58,-46 58,-53 58,-53 58,-56.5 54.5,-60 51,-60"/>
+<text text-anchor="middle" x="29" y="-46.4" font-family="Arial" font-size="12.00" fill="#254bd7">index.js</text>
 </g>
 <!-- src/controller/query.controller.js -->
 <g id="node2" class="node">
 <title>src/controller/query.controller.js</title>
-<path fill="none" stroke="#254bd7" d="M268,-60C268,-60 101,-60 101,-60 97.5,-60 94,-56.5 94,-53 94,-53 94,-46 94,-46 94,-42.5 97.5,-39 101,-39 101,-39 268,-39 268,-39 271.5,-39 275,-42.5 275,-46 275,-46 275,-53 275,-53 275,-56.5 271.5,-60 268,-60"/>
-<text text-anchor="middle" x="184.5" y="-46.4" font-family="Arial" font-size="12.00" fill="#254bd7">src/controller/query.controller.js</text>
+<path fill="none" stroke="#254bd7" d="M268,-99C268,-99 101,-99 101,-99 97.5,-99 94,-95.5 94,-92 94,-92 94,-85 94,-85 94,-81.5 97.5,-78 101,-78 101,-78 268,-78 268,-78 271.5,-78 275,-81.5 275,-85 275,-85 275,-92 275,-92 275,-95.5 271.5,-99 268,-99"/>
+<text text-anchor="middle" x="184.5" y="-85.4" font-family="Arial" font-size="12.00" fill="#254bd7">src/controller/query.controller.js</text>
 </g>
 <!-- index.js&#45;&gt;src/controller/query.controller.js -->
 <g id="edge1" class="edge">
 <title>index.js&#45;&gt;src/controller/query.controller.js</title>
-<path fill="none" stroke="#757575" d="M58.15,-33.17C68.19,-34.48 80.12,-36.03 92.56,-37.65"/>
-<polygon fill="#757575" stroke="#757575" points="92.25,-41.14 102.62,-38.96 93.15,-34.2 92.25,-41.14"/>
+<path fill="none" stroke="#757575" d="M58.24,-58.34C69.34,-61.69 82.22,-65.44 94,-68.5 103.59,-70.99 113.81,-73.46 123.79,-75.76"/>
+<polygon fill="#757575" stroke="#757575" points="123.12,-79.19 133.65,-78 124.67,-72.37 123.12,-79.19"/>
 </g>
 <!-- src/middleware/logger.js -->
 <g id="node3" class="node">
 <title>src/middleware/logger.js</title>
-<path fill="none" stroke="#43d994" d="M250.5,-21C250.5,-21 118.5,-21 118.5,-21 115,-21 111.5,-17.5 111.5,-14 111.5,-14 111.5,-7 111.5,-7 111.5,-3.5 115,0 118.5,0 118.5,0 250.5,0 250.5,0 254,0 257.5,-3.5 257.5,-7 257.5,-7 257.5,-14 257.5,-14 257.5,-17.5 254,-21 250.5,-21"/>
-<text text-anchor="middle" x="184.5" y="-7.4" font-family="Arial" font-size="12.00" fill="#43d994">src/middleware/logger.js</text>
+<path fill="none" stroke="#43d994" d="M250.5,-60C250.5,-60 118.5,-60 118.5,-60 115,-60 111.5,-56.5 111.5,-53 111.5,-53 111.5,-46 111.5,-46 111.5,-42.5 115,-39 118.5,-39 118.5,-39 250.5,-39 250.5,-39 254,-39 257.5,-42.5 257.5,-46 257.5,-46 257.5,-53 257.5,-53 257.5,-56.5 254,-60 250.5,-60"/>
+<text text-anchor="middle" x="184.5" y="-46.4" font-family="Arial" font-size="12.00" fill="#43d994">src/middleware/logger.js</text>
 </g>
 <!-- index.js&#45;&gt;src/middleware/logger.js -->
 <g id="edge2" class="edge">
 <title>index.js&#45;&gt;src/middleware/logger.js</title>
-<path fill="none" stroke="#757575" d="M58.15,-26.02C70.51,-24.49 85.72,-22.6 101.23,-20.68"/>
-<polygon fill="#757575" stroke="#757575" points="101.94,-24.12 111.43,-19.42 101.08,-17.18 101.94,-24.12"/>
+<path fill="none" stroke="#757575" d="M58.15,-49.5C70.51,-49.5 85.72,-49.5 101.23,-49.5"/>
+<polygon fill="#757575" stroke="#757575" points="101.43,-53 111.43,-49.5 101.43,-46 101.43,-53"/>
 </g>
 <!-- src/services/query.service.js -->
 <g id="node4" class="node">
@@ -45,11 +45,17 @@
 <path fill="none" stroke="#254bd7" d="M469,-60C469,-60 318,-60 318,-60 314.5,-60 311,-56.5 311,-53 311,-53 311,-46 311,-46 311,-42.5 314.5,-39 318,-39 318,-39 469,-39 469,-39 472.5,-39 476,-42.5 476,-46 476,-46 476,-53 476,-53 476,-56.5 472.5,-60 469,-60"/>
 <text text-anchor="middle" x="393.5" y="-46.4" font-family="Arial" font-size="12.00" fill="#254bd7">src/services/query.service.js</text>
 </g>
-<!-- src/controller/query.controller.js&#45;&gt;src/services/query.service.js -->
+<!-- index.js&#45;&gt;src/services/query.service.js -->
 <g id="edge3" class="edge">
+<title>index.js&#45;&gt;src/services/query.service.js</title>
+<path fill="none" stroke="#757575" d="M57.29,-38.97C68.49,-35.18 81.69,-31.38 94,-29.5 173.52,-17.36 194.84,-22.73 275,-29.5 293.62,-31.07 313.71,-34.02 331.94,-37.19"/>
+<polygon fill="#757575" stroke="#757575" points="331.38,-40.64 341.84,-38.96 332.62,-33.75 331.38,-40.64"/>
+</g>
+<!-- src/controller/query.controller.js&#45;&gt;src/services/query.service.js -->
+<g id="edge4" class="edge">
 <title>src/controller/query.controller.js&#45;&gt;src/services/query.service.js</title>
-<path fill="none" stroke="#757575" d="M275.09,-49.5C283.65,-49.5 292.34,-49.5 300.92,-49.5"/>
-<polygon fill="#757575" stroke="#757575" points="300.92,-53 310.92,-49.5 300.92,-46 300.92,-53"/>
+<path fill="none" stroke="#757575" d="M241.24,-78C267.59,-73.03 299.22,-67.08 326.72,-61.89"/>
+<polygon fill="#757575" stroke="#757575" points="327.48,-65.31 336.66,-60.02 326.18,-58.43 327.48,-65.31"/>
 </g>
 <!-- src/database/mariadb.js -->
 <g id="node6" class="node">
@@ -58,7 +64,7 @@
 <text text-anchor="middle" x="583.5" y="-85.4" font-family="Arial" font-size="12.00" fill="#254bd7">src/database/mariadb.js</text>
 </g>
 <!-- src/services/query.service.js&#45;&gt;src/database/mariadb.js -->
-<g id="edge5" class="edge">
+<g id="edge6" class="edge">
 <title>src/services/query.service.js&#45;&gt;src/database/mariadb.js</title>
 <path fill="none" stroke="#757575" d="M445.38,-60.05C468.89,-64.93 496.99,-70.76 521.62,-75.87"/>
 <polygon fill="#757575" stroke="#757575" points="521.08,-79.33 531.58,-77.94 522.5,-72.48 521.08,-79.33"/>
@@ -70,7 +76,7 @@
 <text text-anchor="middle" x="583.5" y="-46.4" font-family="Arial" font-size="12.00" fill="#43d994">src/models/Query.js</text>
 </g>
 <!-- src/services/query.service.js&#45;&gt;src/models/Query.js -->
-<g id="edge6" class="edge">
+<g id="edge7" class="edge">
 <title>src/services/query.service.js&#45;&gt;src/models/Query.js</title>
 <path fill="none" stroke="#757575" d="M476.14,-49.5C488.25,-49.5 500.64,-49.5 512.48,-49.5"/>
 <polygon fill="#757575" stroke="#757575" points="512.73,-53 522.73,-49.5 512.73,-46 512.73,-53"/>
@@ -82,7 +88,7 @@
 <text text-anchor="middle" x="583.5" y="-7.4" font-family="Arial" font-size="12.00" fill="#43d994">src/utils/tools.js</text>
 </g>
 <!-- src/services/query.service.js&#45;&gt;src/utils/tools.js -->
-<g id="edge7" class="edge">
+<g id="edge8" class="edge">
 <title>src/services/query.service.js&#45;&gt;src/utils/tools.js</title>
 <path fill="none" stroke="#757575" d="M445.38,-38.95C469.86,-33.87 499.32,-27.76 524.65,-22.5"/>
 <polygon fill="#757575" stroke="#757575" points="525.42,-25.92 534.5,-20.46 523.99,-19.06 525.42,-25.92"/>
@@ -94,7 +100,7 @@
 <text text-anchor="middle" x="768.5" y="-85.4" font-family="Arial" font-size="12.00" fill="#43d994">src/database/maria.conf.js</text>
 </g>
 <!-- src/database/mariadb.js&#45;&gt;src/database/maria.conf.js -->
-<g id="edge4" class="edge">
+<g id="edge5" class="edge">
 <title>src/database/mariadb.js&#45;&gt;src/database/maria.conf.js</title>
 <path fill="none" stroke="#757575" d="M655.25,-88.5C663.64,-88.5 672.27,-88.5 680.84,-88.5"/>
 <polygon fill="#757575" stroke="#757575" points="680.86,-92 690.86,-88.5 680.86,-85 680.86,-92"/>

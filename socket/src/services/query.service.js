@@ -1,6 +1,6 @@
-import { convertRegionName, dev } from "../utils/tools.js";
-import { sql } from "../database/mariadb.js";
-import Query from "../models/Query.js";
+const { convertRegionName, dev } = require("../utils/tools.js");
+const { sql } = require("../database/mariadb.js");
+const Query = require("../models/Query.js");
 
 const options = {
   cpu_usage: 80,
@@ -632,14 +632,14 @@ Query.updateLocation = async (req, res, next) => {
     //     ? [[]]
     //     : await sql.promise().query(playersQueries, [space, channel]);
 
-    res.status(200).json({
-      ok: true,
-      // players: readPlayers,
-    });
+    // res.status(200).json({
+    //   ok: true,
+    //   // players: readPlayers,
+    // });
   } catch (e) {
-    res.status(500).json({
-      ok: false,
-    });
+    // res.status(500).json({
+    //   ok: false,
+    // });
   }
 };
 
@@ -695,4 +695,4 @@ Query.findUsers = async (req, res, next) => {
 
 const queryService = Query;
 
-export default queryService;
+module.exports = queryService;

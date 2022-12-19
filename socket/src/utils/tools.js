@@ -63,4 +63,4 @@ const convertRegionName = (locale) => {
 const capitalize = (words) =>
   words[0].toUpperCase() + words.slice(1).toLowerCase();
 
-export { createEmail, dev, convertRegionName, capitalize };
+module.exports = { createEmail, dev, convertRegionName, capitalize };
