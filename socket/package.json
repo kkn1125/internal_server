@@ -22,6 +22,7 @@
     "pm2": "^5.2.2",
     "protobufjs": "^7.1.2",
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.15.0",
-    "ws": "^8.11.0"
+    "ws": "^8.11.0",
+    "zeromq": "6.0.0-beta.16"
   }
 }

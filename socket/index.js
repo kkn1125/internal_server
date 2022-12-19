@@ -8,6 +8,7 @@ const Queue = require("./src/models/Queue");
 const queryService = require("./src/services/query.service");
 // const pm2 = require("pm2");
 const locationQueue = new Queue();
+const zmq = require("zeromq");
 
 const { Message, Field } = protobufjs;
 
@@ -310,3 +311,36 @@ pm2.launchBus((err, bus) => {
 process.on("SIGINT", function () {
   process.exit(0);
 });
+
+/* zmq broker */
+async function clientRun() {
+  relay.pull = new zmq.Pull();
+  relay.push = new zmq.Push();
+  relay.pull.connect(`tcp://${clientHost}:${clientPort}`);
+  await relay.push.bind(`tcp://${serverHost}:${serverPort}`);
+
+  for await (const [msg] of relay.pull) {
+    try {
+      const decoded = decoder.decode(msg);
+
+      const json = JSON.parse(decoded);
+      if (json.type === "players") {
+        console.log("전파받음", json);
+        console.log("전파받음", msg);
+        app.publish(
+          `${json.server}-${json.channel}`,
+          JSON.stringify({ type: json.type, players: json.players })
+        );
+      }
+    } catch (e) {
+      // console.log("전파받음", json);
+      const decoded = decoder.decode(msg);
+
+      const json = JSON.parse(decoded);
+      console.log("전파받음", msg);
+      const message = Message.encode(new Message(json)).finish();
+      app.publish(`broadcast`, message, true, true);
+    }
+  }
+}
+clientRun();
