@@ -9,17 +9,16 @@ const queryService = require("./src/services/query.service");
 // const pm2 = require("pm2");
 const locationQueue = new Queue();
 const zmq = require("zeromq");
+const { dev } = require("./src/utils/tools");
 
 const { Message, Field } = protobufjs;
 
 Field.d(1, "float", "required")(Message.prototype, "id");
-// Field.d(2, "int32", "required")(Message.prototype, "space");
-// Field.d(3, "int32", "required")(Message.prototype, "channel");
 Field.d(2, "float", "required")(Message.prototype, "pox");
 Field.d(3, "float", "required")(Message.prototype, "poy");
 Field.d(4, "float", "required")(Message.prototype, "poz");
 Field.d(5, "float", "required")(Message.prototype, "roy");
-// Field.d(1, "string", "required")(Message.prototype, "loc");
+
 // const __dirname = path.resolve();
 const mode = process.env.NODE_ENV;
 const backpressure = 1024;
@@ -37,15 +36,11 @@ const apiPort = Number(process.env.API_PORT) || 3000;
 const users = new Map();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-
+const relay = {};
 let now = null;
 
 const app = uWs
-  ./*SSL*/ App(/* {
-    key_file_name: "misc/key.pem",
-    cert_file_name: "misc/cert.pem",
-    passphrase: "1234",
-  } */)
+  .App({})
   .ws("/*", {
     /* Options */
     compression: 0,
@@ -53,6 +48,8 @@ const app = uWs
     idleTimeout: 64,
     /* Handlers */
     upgrade: (res, req, context) => {
+      const q = req.getQuery("q");
+      const json = JSON.parse(decodeURI(q));
       console.log(
         "An Http connection wants to become WebSocket, URL: " +
           req.getUrl() +
@@ -62,113 +59,87 @@ const app = uWs
       res.upgrade(
         {
           url: req.getUrl(),
-          token: req.getQuery("csrftoken"),
-          space: req.getQuery("space"),
-          channel: req.getQuery("channel"),
-          pk: req.getQuery("pk"),
+          user: json.user,
+          space: json.space,
+          channel: json.channel,
+          locale: json.locale,
+          socket: json.socket,
+          publisher: json.publisher,
+          connection: json.connection,
+          allocation: json.allocation,
+          // token: req.getQuery("csrftoken"),
+          // pk: req.getQuery("pk"),
+          // uuid: req.getQuery("csrftoken"),
+          // locale: req.getQuery("locale"),
+          // space: req.getQuery("space"),
+          // channel: req.getQuery("channel"),
+          // sock: req.getQuery("sock"),
+          // pub: req.getQuery("pub"),
         },
         /* Spell these correctly */
         req.getHeader("sec-websocket-key"),
         req.getHeader("sec-websocket-protocol"),
         req.getHeader("sec-websocket-extensions"),
+        // req.getHeader(""),
         context
       );
     },
     open: (ws) => {
+      console.log(Object.assign({}, ws));
       users.set(
         ws,
         Object.assign(users.get(ws) || {}, {
-          token: ws.token,
+          uuid: ws.user.uuid,
         })
       );
       ws.subscribe("broadcast");
-      ws.subscribe(`${ws.space}-${ws.channel}`);
+      ws.subscribe(`${ws.space.pk}-${ws.channel.pk}`);
       console.log("A WebSocket connected with URL: " + ws.url);
+      clientRun(ws.socket, ws.publisher, ws);
+      // sendMessage(`${ws.user.uuid}접속`);
+      // pushMessage("test");
     },
     message: (ws, message, isBinary) => {
       /* Ok is false if backpressure was built up, wait for drain */
       if (isBinary) {
         const locationJson = Message.decode(new Uint8Array(message)).toJSON();
-        // axios
-        //   .post(`http://${apiHost}:${apiPort}/query/locations`, {
-        //     pk: ws.pk,
-        //     space: ws.space,
-        //     channel: ws.channel,
-        //     pox: locationJson.pox,
-        //     poy: locationJson.poy,
-        //     poz: locationJson.poz,
-        //     roy: locationJson.roy,
-        //   })
-        //   .then((result) => {
-        //     // console.log(result)
-        //     //   const { data } = result;
-        //     //   // data.players
-        //     //   process.send({
-        //     //     type: "process:msg",
-        //     //     data: {
-        //     //       success: true,
-        //     //       type: "players",
-        //     //       target: `${ws.space}-${ws.channel}`,
-        //     //       // target: "broadcast",
-        //     //       players: data.players,
-        //     //     },
-        //     //   });
-        //   })
-        //   .catch((err) => {
-        //     console.log(err);
-        //   });
         queryService.updateLocation({
           body: {
-            pk: ws.pk,
-            space: ws.space,
-            channel: ws.channel,
+            pk: ws.user.pk,
+            space: ws.space.pk,
+            channel: ws.channel.pk,
             pox: locationJson.pox,
             poy: locationJson.poy,
             poz: locationJson.poz,
             roy: locationJson.roy,
           },
         });
-        // now = `${ws.space}-${ws.channel}`;
-        // locationQueue.enter(message);
         if (ws.getBufferedAmount() < backpressure) {
-          process.send({
-            type: "process:msg",
-            data: {
-              success: true,
+          // process.send({
+          //   type: "process:msg",
+          //   data: {
+          //     success: true,
+          //     type: "locations",
+          //     target: `${ws.space.pk}-${ws.channel.pk}`,
+          //     pk: ws.user.pk,
+          //     locationJson,
+          //   },
+          // });
+          sendMessage(
+            JSON.stringify({
               type: "locations",
-              target: `${ws.space}-${ws.channel}`,
-              // target: "broadcast",
-              pk: ws.pk,
+              target: `${ws.space.pk}-${ws.channel.pk}`,
               locationJson,
-            },
-          });
+            })
+          );
         }
-        // app.publish(
-        //   `${ws.space}-${ws.channel}`,
-        //   message,
-        //   true,
-        //   true
-        // "broadcast",
-        // JSON.stringify(data.players)
-        // );
-        // process.send({
-        //   type: "process:msg",
-        //   data: {
-        //     success: true,
-        //     type: "locations",
-        //     target: `${ws.space}-${ws.channel}`,
-        //     // target: "broadcast",
-        //     pk: ws.pk,
-        //     locationJson,
-        //   },
-        // });
       } else {
         const strings = decoder.decode(message);
         const json = JSON.parse(strings);
         if (json.type === "login") {
           axios
             .post(`http://${apiHost}:${apiPort}/query/login`, {
-              pk: json.pk,
+              pk: ws.user.pk,
               nickname: json.nickname,
               password: json.password,
               pox: json.pox,
@@ -179,22 +150,23 @@ const app = uWs
             .then((result) => {
               const { data } = result;
               ws.send(JSON.stringify(data));
-              // app.publish(
-              //   // `${me.space}_${me.channel}`,
-              //   `${ws.space}-${ws.channel}`,
-              //   JSON.stringify(data.players)
-              // );
               if (ws.getBufferedAmount() < backpressure) {
-                process.send({
-                  type: "process:msg",
-                  data: {
-                    success: true,
+                // process.send({
+                //   type: "process:msg",
+                //   data: {
+                //     success: true,
+                //     type: "players",
+                //     target: `${ws.space.pk}-${ws.channel.pk}`,
+                //     players: data.players,
+                //   },
+                // });
+                sendMessage(
+                  JSON.stringify({
                     type: "players",
-                    target: `${ws.space}-${ws.channel}`,
-                    // target: "broadcast",
+                    target: `${ws.space.pk}-${ws.channel.pk}`,
                     players: data.players,
-                  },
-                });
+                  })
+                );
               }
             })
             .catch((err) => {});
@@ -203,59 +175,44 @@ const app = uWs
     },
     drain: (ws) => {
       console.log("WebSocket backpressure: " + ws.getBufferedAmount());
-      // process.send({
-      //   type: "process:msg",
-      //   data: {
-      //     success: true,
-      //     type: "players",
-      //     target: `${ws.space}-${ws.channel}`,
-      //     // target: "broadcast",
-      //     players: data.players,
-      //   },
-      // });
-      // while (ws.getBufferedAmount() < backpressure) {
-      //   process.send({
-      //     type: "process:msg",
-      //     data: {
-      //       success: true,
-      //       type: "players",
-      //       target: `${ws.space}-${ws.channel}`,
-      //       // target: "broadcast",
-      //       players: data.players,
-      //     },
-      //   });
-      // }
     },
     close: (ws, code, message) => {
       console.log("WebSocket closed");
-      console.log(ws.pk);
-      // axios
-      //   .post(`http://${apiHost}:${apiPort}/query/logout`, {
-      //     pk: ws.pk,
-      //   })
-      //   .then((result) => {
-      //     const { data } = result;
-      //     console.log(data);
-      //     // ws.send(JSON.stringify(data));
-      //     // app.publish(
-      //     //   `${ws.space}-${ws.channel}`,
-      //     //   // "broadcast",
-      //     //   JSON.stringify(data.players)
-      //     // );
-      //     if (ws.getBufferedAmount() < backpressure) {
-      //       process.send({
-      //         type: "process:msg",
-      //         data: {
-      //           success: true,
-      //           type: "players",
-      //           target: `${ws.space}-${ws.channel}`,
-      //           // target: "broadcast",
-      //           players: data.players,
-      //         },
-      //       });
-      //     }
-      //   })
-      //   .catch((err) => {});
+      console.log(ws.user.pk);
+      axios
+        .post(`http://${apiHost}:${apiPort}/query/logout`, {
+          pk: ws.user.pk,
+        })
+        .then((result) => {
+          const { data } = result;
+          console.log(data);
+          // ws.send(JSON.stringify(data));
+          // app.publish(
+          //   `${ws.space.pk}-${ws.channel.pk}`,
+          //   // "broadcast",
+          //   JSON.stringify(data.players)
+          // );
+          if (ws.getBufferedAmount() < backpressure) {
+            // process.send({
+            //   type: "process:msg",
+            //   data: {
+            //     success: true,
+            //     type: "players",
+            //     target: `${ws.space.pk}-${ws.channel.pk}`,
+            //     // target: "broadcast",
+            //     players: data.players,
+            //   },
+            // });
+            sendMessage(
+              JSON.stringify({
+                type: "players",
+                target: `${ws.space.pk}-${ws.channel.pk}`,
+                players: data.players,
+              })
+            );
+          }
+        })
+        .catch((err) => {});
     },
   })
   .get("/enter", (res, req) => {
@@ -263,8 +220,8 @@ const app = uWs
   })
   .listen(port, (token) => {
     if (token) {
-      console.log("Listening to port " + port);
       process.send("ready");
+      console.log("Listening to port " + port);
     } else {
       console.log("Failed to listen to port " + port);
     }
@@ -313,34 +270,125 @@ process.on("SIGINT", function () {
 });
 
 /* zmq broker */
-async function clientRun() {
-  relay.pull = new zmq.Pull();
-  relay.push = new zmq.Push();
-  relay.pull.connect(`tcp://${clientHost}:${clientPort}`);
-  await relay.push.bind(`tcp://${serverHost}:${serverPort}`);
+async function clientRun(pusher, puller, ws) {
+  // relay.request = new zmq.Request();
+  // relay.request.connect(`tcp://${puller.ip}:${puller.port}`);
+  // console.log(
+  //   `request bind relay server on "tcp://${puller.ip}:${puller.port}"`
+  // );
 
-  for await (const [msg] of relay.pull) {
-    try {
-      const decoded = decoder.decode(msg);
+  const net = require("net");
+  relay.client = net.connect({
+    host: puller.ip,
+    port: puller.port,
+  });
+  relay.client.on("connect", function () {
+    console.log("connected to server!");
+  });
+  relay.client.on("data", function (chunk) {
+    console.log("received:", chunk);
+    console.log("received length:", chunk.length);
 
-      const json = JSON.parse(decoded);
-      if (json.type === "players") {
-        console.log("전파받음", json);
-        console.log("전파받음", msg);
-        app.publish(
-          `${json.server}-${json.channel}`,
-          JSON.stringify({ type: json.type, players: json.players })
-        );
+    const isPlayers = decoder.decode(chunk);
+    console.log("isPlayers", isPlayers);
+    if (isPlayers.match(/"type":"players"/)) {
+      for (let i = 0; i < chunk.length; i++) {
+        // console.log(chunk);
+        const decoded = decoder.decode(chunk.slice(i * 190, (i + 1) * 190));
+        // console.log("received:", decoded);
+        try {
+          const json = JSON.parse(decoded);
+
+          if (!ws.isSubscribed(json.target)) {
+            ws.subscribe(json.target);
+          }
+          // console.log(json);
+          // if (json.type === "login") {
+          // }
+          // if (json.type === "logout") {
+          // }
+          if (json.type === "players") {
+            process.send({
+              type: "process:msg",
+              data: {
+                success: true,
+                type: json.type,
+                target: json.target,
+                players: json.players,
+              },
+            });
+          }
+        } catch (e) {}
       }
-    } catch (e) {
-      // console.log("전파받음", json);
-      const decoded = decoder.decode(msg);
 
-      const json = JSON.parse(decoded);
-      console.log("전파받음", msg);
-      const message = Message.encode(new Message(json)).finish();
-      app.publish(`broadcast`, message, true, true);
+      // const json = JSON.parse(isPlayers);
+      // if (!ws.isSubscribed(json.target)) {
+      //   ws.subscribe(json.target);
+      // }
+      // console.log(json);
+      // if (json.type === "players") {
+      //   process.send({
+      //     type: "process:msg",
+      //     data: {
+      //       success: true,
+      //       type: json.type,
+      //       target: json.target,
+      //       players: json.players,
+      //     },
+      //   });
+      // }
+    } else {
+      for (let i = 0; i < chunk.length; i++) {
+        // console.log(chunk);
+        const decoded = decoder.decode(chunk.slice(i * 112, (i + 1) * 112));
+        // console.log("received:", decoded);
+        try {
+          const json = JSON.parse(decoded);
+
+          if (!ws.isSubscribed(json.target)) {
+            ws.subscribe(json.target);
+          }
+          // console.log(json);
+          // if (json.type === "login") {
+          // }
+          // if (json.type === "logout") {
+          // }
+          if (json.type === "locations") {
+            process.send({
+              type: "process:msg",
+              data: {
+                success: true,
+                type: json.type,
+                target: json.target,
+                pk: json.locationJson.id,
+                locationJson: json.locationJson,
+              },
+            });
+          }
+        } catch (e) {}
+      }
     }
-  }
+  });
+  relay.client.on("error", function (chunk) {
+    console.log("error!");
+  });
+  relay.client.on("timeout", function (chunk) {
+    console.log("timeout!");
+  });
+  // relay.client.write(JSON.stringify(queryService.players));
 }
-clientRun();
+
+// async function dataProcessor(msg) {
+//   console.log(msg);
+//   // console.log("sending data...");
+//   // await relay.push.send("test");
+//   // const [result] = await relay.push.receive();
+//   // dev.log(result);
+// }
+
+async function sendMessage(message) {
+  relay.client.write(message);
+  // await relay.request.send(message);
+  // const [result] = await relay.request.receive();
+  // console.log(result);
+}

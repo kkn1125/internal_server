@@ -12,7 +12,7 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
   });
   const apiHost = process.env.VITE_API_HOST;
   const apiPort = process.env.VITE_API_PORT;
-  console.log(`http://${apiHost}:${apiPort}/sse`)
+  // console.log(`http://${apiHost}:${apiPort}/sse`)
   return {
     // vite config
     define: {

@@ -1,14 +1,17 @@
 module.exports = {
   apps: [
     {
-      name: "app",
-      script: "index.js",
+      name: "publisher",
+      script: "app.js",
       watch: ["."],
       // node_args: "-r esm",
       instances: "6",
-      increment_var: "PORT",
       exec_mode: "cluster",
+      increment_var: "SERVER_PORT",
       wait_ready: true,
+      env: {
+        SERVER_PORT: 20000,
+      },
     },
   ],
 

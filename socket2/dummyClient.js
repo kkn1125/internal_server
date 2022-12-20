@@ -16,7 +16,7 @@ const { Message, Field } = protobuf;
 const attachUserData = {
   // uuid: v4(),
   // email: createEmail(),
-  // locale: "ko-kr",
+  locale: "ko-kr",
 };
 
 Field.d(1, "float", "required")(Message.prototype, "id");
@@ -33,7 +33,7 @@ Field.d(5, "float", "required")(Message.prototype, "roy");
 // Field.d(6, "float", "required")(Message.prototype, "poz");
 // Field.d(7, "float", "required")(Message.prototype, "roy");
 
-const amount = 50;
+const amount = 150;
 const start = 0;
 const end = amount - start;
 const sockets = new Map();
@@ -47,28 +47,16 @@ for (let i = start; i < end; i++) {
   });
 }
 
-function connectSocket(connectionData) {
-  const {
-    locale,
-    socket,
-    publisher,
-    connection,
-    space,
-    channel,
-    allocation,
-    user,
-  } = connectionData;
-  const q = encodeURI(JSON.stringify(connectionData).trim());
-  const ws = new WebSocket(`ws://${socket.ip}:${socket.port}/?q=${q}`);
-  // const socket = new WebSocket(
-  //   `ws://${
-  //     // socketInfo.socket.ip === "192.168.254.16"
-  //     // ? "localhost"
-  //     ip
-  //   }:${port}/?csrftoken=${uuid}&space=${space}&channel=${channel}&pk=${pk}`
-  // );
-  ws.binaryType = "arraybuffer";
-  ws.onopen = function (e) {
+function connectSocket(ip, port, uuid, space, channel, pk) {
+  const socket = new WebSocket(
+    `ws://${
+      // socketInfo.socket.ip === "192.168.254.16"
+      // ? "localhost"
+      ip
+    }:${port}/?csrftoken=${uuid}&space=${space}&channel=${channel}&pk=${pk}`
+  );
+  socket.binaryType = "arraybuffer";
+  socket.onopen = function (e) {
     console.log("소켓 오픈");
     // me = socketInfo.user.uuid;
     // socket.send(
@@ -84,11 +72,11 @@ function connectSocket(connectionData) {
     //   })
     // );
     setTimeout(() => {
-      ws.send(
+      socket.send(
         JSON.stringify({
           type: "login",
-          pk: user.pk,
-          nickname: "guest-" + user.uuid.slice(0, 10),
+          pk: pk,
+          nickname: "guest-" + uuid.slice(0, 10),
           password: "1234",
           pox: 500 - game.size.user.x / 2,
           poy: 500 - game.size.user.x / 2,
@@ -99,10 +87,10 @@ function connectSocket(connectionData) {
       setTimeout(() => {
         setInterval(() => {
           // console.log(uuid);
-          ws.send(
+          socket.send(
             Message.encode(
               new Message({
-                id: user.pk,
+                id: pk,
                 // space: user.space_id,
                 // channel: user.channel_id,
                 pox: Math.random() * 500 - 100 + 100,
@@ -116,14 +104,14 @@ function connectSocket(connectionData) {
       }, 2000);
     }, 2000);
   };
-  ws.onmessage = function (message) {
+  socket.onmessage = function (message) {
     const { data } = message;
   };
-  ws.onerror = function (e) {
+  socket.onerror = function (e) {
     console.log("소켓 에러");
     throw e.message;
   };
-  ws.onclose = function (e) {
+  socket.onclose = function (e) {
     console.log("소켓 닫힘");
   };
 
@@ -134,7 +122,7 @@ function connectSocket(connectionData) {
 for (let user of sockets.values()) {
   const uuid = v4();
   axios
-    .post(`http://192.168.254.16:3000/query/attach`, {
+    .post(`http://192.168.254.16:3000/query/enter`, {
       uuid: uuid,
       email: "",
       locale: "ko-kr",
@@ -144,7 +132,14 @@ for (let user of sockets.values()) {
       console.log(data);
       sockets.set(
         uuid,
-        connectSocket(data)
+        connectSocket(
+          data.socket.ip,
+          data.socket.port,
+          uuid,
+          data.space.pk,
+          data.channel.pk,
+          data.user.pk
+        )
       );
       attachUserData.pk = data.user.pk;
       attachUserData.uuid = uuid;
