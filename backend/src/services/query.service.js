@@ -6,8 +6,8 @@ const options = {
   cpu_usage: 80,
   memory_usage: 80,
   ip: {
-    socket: "192.168.254.16",
-    publisher: "192.168.254.16",
+    socket: "192.168.88.232",
+    publisher: "192.168.88.232",
   },
   port: {
     socket: 10000,
@@ -15,11 +15,11 @@ const options = {
   },
   limit: {
     locales: 1000,
-    pool_sockets: 5,
+    pool_sockets: 50,
     pool_publishers: 1000,
     spaces: 5,
-    channels: 2,
-    users: 10,
+    channels: 50,
+    users: 50,
   },
 };
 
@@ -560,7 +560,10 @@ Query.login = async (req, res, next) => {
 
     const [readPlayers] = await sql
       .promise()
-      .query(playersQueries, [space_id, channel_id]);
+      .query(
+        `SELECT * FROM locations LEFT JOIN users ON users.id = locations.user_id WHERE users.id = ?`,
+        [pk]
+      );
     // console.log("login players", readPlayers);
     // const data = await sql.promise().query(`SELECT 1`);
     res.status(200).json({
@@ -598,8 +601,9 @@ Query.logout = async (req, res, next) => {
               userInfo[0].channel_id,
             ]);
     // const data = await sql.promise().query(`SELECT 1`);
-    // console.log("logout players", readPlayers);
+    console.log("logout players", readPlayers);
     res.status(200).json({
+      ok: true,
       players: readPlayers,
     });
   } catch (e) {

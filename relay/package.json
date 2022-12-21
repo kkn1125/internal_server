@@ -6,7 +6,8 @@
   "scripts": {
     "start": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm3' pm2 start ecosystem.config.js",
     "dev": "CHOKIDAR_USEPOLLING=true cross-env NODE_ENV=development nodemon app.js",
-    "log": "PM2_HOME='/root/.pm3' pm2 log"
+    "log": "PM2_HOME='/root/.pm3' pm2 log",
+    "kill": "PM2_HOME='/root/.pm3' pm2 kill"
   },
   "keywords": [],
   "author": "",

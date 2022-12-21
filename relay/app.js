@@ -25,29 +25,44 @@ const relay = {};
 //   await relay.server.send("from server" + msg);
 // }
 
-const messageQueue = [];
+// const messageQueue = [];
 const decoder = new TextDecoder();
 
-const maxBinary = 112 * 50;
+let temp = null;
 
 const net = require("net");
+
 relay.server = net.createServer((socket) => {
+  socket.setMaxListeners(50);
   console.log(socket.address().address + "connected");
+  process.send("ready");
   socket.on("data", function (data) {
     // console.log("rcv:", data);
     // console.log("rcv decoded:", decoder.decode(data));
-    messageQueue.push(data);
-    // socket.write(data);
+    // if (maxBinary) {
+    // messageQueue.push(data);
+    // }
+    temp = data;
+    const success = !socket.write(data);
+    // if (!success) {
+    //   (function (data) {})(data);
+    // }
     // socket.
+  });
+  socket.on("drain", function (a, b, c) {
+    console.log(a, b, c);
+    console.log("drain", temp);
+    socket.write(temp);
   });
   socket.on("close", function () {
     console.log("client close");
   });
-  setInterval(() => {
-    if (messageQueue.length > 0) {
-      socket.write(messageQueue.shift());
-    }
-  }, 1);
+  // setInterval(() => {
+  //   if (messageQueue.length > 0 && maxBinary) {
+  //     maxBinary = socket.write(messageQueue.shift());
+  //     // const drain = socket.write(messageQueue.shift());
+  //   }
+  // }, 1);
   // socket.pu("open server on " + serverPort);
 });
 

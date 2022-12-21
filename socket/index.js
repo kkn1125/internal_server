@@ -21,7 +21,7 @@ Field.d(5, "float", "required")(Message.prototype, "roy");
 
 // const __dirname = path.resolve();
 const mode = process.env.NODE_ENV;
-const backpressure = 1024;
+const backpressure = 512;
 dotenv.config({
   path: path.join(__dirname, ".env"),
 });
@@ -38,6 +38,8 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const relay = {};
 let now = null;
+
+let sockets = new Map();
 
 const app = uWs
   .App({})
@@ -67,20 +69,11 @@ const app = uWs
           publisher: json.publisher,
           connection: json.connection,
           allocation: json.allocation,
-          // token: req.getQuery("csrftoken"),
-          // pk: req.getQuery("pk"),
-          // uuid: req.getQuery("csrftoken"),
-          // locale: req.getQuery("locale"),
-          // space: req.getQuery("space"),
-          // channel: req.getQuery("channel"),
-          // sock: req.getQuery("sock"),
-          // pub: req.getQuery("pub"),
         },
         /* Spell these correctly */
         req.getHeader("sec-websocket-key"),
         req.getHeader("sec-websocket-protocol"),
         req.getHeader("sec-websocket-extensions"),
-        // req.getHeader(""),
         context
       );
     },
@@ -92,12 +85,11 @@ const app = uWs
           uuid: ws.user.uuid,
         })
       );
+      sockets.set(ws.user.pk, ws);
       ws.subscribe("broadcast");
       ws.subscribe(`${ws.space.pk}-${ws.channel.pk}`);
       console.log("A WebSocket connected with URL: " + ws.url);
       clientRun(ws.socket, ws.publisher, ws);
-      // sendMessage(`${ws.user.uuid}접속`);
-      // pushMessage("test");
     },
     message: (ws, message, isBinary) => {
       /* Ok is false if backpressure was built up, wait for drain */
@@ -115,16 +107,6 @@ const app = uWs
           },
         });
         if (ws.getBufferedAmount() < backpressure) {
-          // process.send({
-          //   type: "process:msg",
-          //   data: {
-          //     success: true,
-          //     type: "locations",
-          //     target: `${ws.space.pk}-${ws.channel.pk}`,
-          //     pk: ws.user.pk,
-          //     locationJson,
-          //   },
-          // });
           sendMessage(
             JSON.stringify({
               type: "locations",
@@ -151,25 +133,19 @@ const app = uWs
               const { data } = result;
               ws.send(JSON.stringify(data));
               if (ws.getBufferedAmount() < backpressure) {
-                // process.send({
-                //   type: "process:msg",
-                //   data: {
-                //     success: true,
-                //     type: "players",
-                //     target: `${ws.space.pk}-${ws.channel.pk}`,
-                //     players: data.players,
-                //   },
-                // });
                 sendMessage(
                   JSON.stringify({
                     type: "players",
                     target: `${ws.space.pk}-${ws.channel.pk}`,
+                    pk: ws.user.pk,
                     players: data.players,
                   })
                 );
               }
             })
-            .catch((err) => {});
+            .catch((err) => {
+              console.log(err);
+            });
         }
       }
     },
@@ -179,38 +155,30 @@ const app = uWs
     close: (ws, code, message) => {
       console.log("WebSocket closed");
       console.log(ws.user.pk);
+      // sendMessage(
+      //   JSON.stringify({
+      //     type: "logout",
+      //     target: `${ws.space.pk}-${ws.channel.pk}`,
+      //     pk: ws.user.pk,
+      //   })
+      // );
       axios
         .post(`http://${apiHost}:${apiPort}/query/logout`, {
           pk: ws.user.pk,
         })
         .then((result) => {
           const { data } = result;
-          console.log(data);
-          // ws.send(JSON.stringify(data));
-          // app.publish(
-          //   `${ws.space.pk}-${ws.channel.pk}`,
-          //   // "broadcast",
-          //   JSON.stringify(data.players)
-          // );
-          if (ws.getBufferedAmount() < backpressure) {
-            // process.send({
-            //   type: "process:msg",
-            //   data: {
-            //     success: true,
-            //     type: "players",
-            //     target: `${ws.space.pk}-${ws.channel.pk}`,
-            //     // target: "broadcast",
-            //     players: data.players,
-            //   },
-            // });
-            sendMessage(
-              JSON.stringify({
-                type: "players",
-                target: `${ws.space.pk}-${ws.channel.pk}`,
-                players: data.players,
-              })
-            );
-          }
+          console.log(data, "여기!");
+          // if (ws.getBufferedAmount() < backpressure) {
+          // console.log(data);
+          sendMessage(
+            JSON.stringify({
+              type: "logout",
+              target: `${ws.space.pk}-${ws.channel.pk}`,
+              players: data.players,
+            })
+          );
+          // }
         })
         .catch((err) => {});
     },
@@ -230,15 +198,15 @@ const app = uWs
 pm2.launchBus((err, bus) => {
   if (err) return;
   bus.on("process:msg", function (packet) {
-    // console.log(packet);
     if (packet.hasOwnProperty("raw")) {
     } else {
       const { data } = packet;
       if (data.type === "players") {
+        console.log("packet", data.target);
+        console.log("packet", data.players);
         app.publish(data.target, JSON.stringify(data.players));
       } else if (data.type === "locations") {
         now = data.target;
-        // console.log(now);
         const encoded = Message.encode(
           new Message({
             id: data.pk,
@@ -248,10 +216,11 @@ pm2.launchBus((err, bus) => {
             roy: data.locationJson.roy,
           })
         ).finish();
-        // console.log(encoded);
-        // console.log(data.target);
         app.publish(data.target, encoded, true, true);
-        // locationQueue.enter(encoded);
+      } else if (data.type === "logout") {
+        // console.log("여긴오냐");
+        now = data.target;
+        app.publish(data.target, JSON.stringify(data));
       }
     }
   });
@@ -270,13 +239,8 @@ process.on("SIGINT", function () {
 });
 
 /* zmq broker */
+let rest = "";
 async function clientRun(pusher, puller, ws) {
-  // relay.request = new zmq.Request();
-  // relay.request.connect(`tcp://${puller.ip}:${puller.port}`);
-  // console.log(
-  //   `request bind relay server on "tcp://${puller.ip}:${puller.port}"`
-  // );
-
   const net = require("net");
   relay.client = net.connect({
     host: puller.ip,
@@ -286,87 +250,84 @@ async function clientRun(pusher, puller, ws) {
     console.log("connected to server!");
   });
   relay.client.on("data", function (chunk) {
-    console.log("received:", chunk);
-    console.log("received length:", chunk.length);
-
-    const isPlayers = decoder.decode(chunk);
-    console.log("isPlayers", isPlayers);
-    if (isPlayers.match(/"type":"players"/)) {
-      for (let i = 0; i < chunk.length; i++) {
-        // console.log(chunk);
-        const decoded = decoder.decode(chunk.slice(i * 190, (i + 1) * 190));
-        // console.log("received:", decoded);
-        try {
-          const json = JSON.parse(decoded);
-
-          if (!ws.isSubscribed(json.target)) {
-            ws.subscribe(json.target);
-          }
-          // console.log(json);
-          // if (json.type === "login") {
-          // }
-          // if (json.type === "logout") {
-          // }
-          if (json.type === "players") {
-            process.send({
-              type: "process:msg",
-              data: {
-                success: true,
-                type: json.type,
-                target: json.target,
-                players: json.players,
-              },
-            });
-          }
-        } catch (e) {}
-      }
-
-      // const json = JSON.parse(isPlayers);
-      // if (!ws.isSubscribed(json.target)) {
-      //   ws.subscribe(json.target);
-      // }
-      // console.log(json);
-      // if (json.type === "players") {
-      //   process.send({
-      //     type: "process:msg",
-      //     data: {
-      //       success: true,
-      //       type: json.type,
-      //       target: json.target,
-      //       players: json.players,
-      //     },
-      //   });
-      // }
+    const decoded = decoder.decode(chunk);
+    // console.log("decoded", decoded);
+    const lastIndex = decoded.lastIndexOf("}{");
+    // console.log("lastIndex", lastIndex);
+    rest = decoded;
+    let result = null;
+    if (lastIndex > 0) {
+      result = rest.slice(0, lastIndex + 1);
+      rest = rest.slice(lastIndex + 1);
     } else {
-      for (let i = 0; i < chunk.length; i++) {
-        // console.log(chunk);
-        const decoded = decoder.decode(chunk.slice(i * 112, (i + 1) * 112));
-        // console.log("received:", decoded);
-        try {
-          const json = JSON.parse(decoded);
+      result = rest;
+      rest = "";
+    }
+    // console.log("last", last);
+    try {
+      // console.log("received:", "[" + last.replace(/}{/g, "},{") + "]");
+      const decodeList = JSON.parse("[" + result.replace(/}{/g, "},{") + "]");
+      for (let i = 0; i < decodeList.length; i++) {
+        const row = decodeList[i];
+        // console.log("row", row);
+        // const json = JSON.parse(row);
+        // console.log("json data", row);
+        // if (row.type !== "logout") {
 
-          if (!ws.isSubscribed(json.target)) {
-            ws.subscribe(json.target);
+        // }
+        console.log(row);
+        if (row.type === "players") {
+          console.log("net tcp player");
+          console.log(row.target);
+          try {
+            if (!ws.isSubscribed(row.target)) {
+              ws.subscribe(row.target);
+            }
+          } catch (e) {
+            // console.log(e);
           }
-          // console.log(json);
-          // if (json.type === "login") {
-          // }
-          // if (json.type === "logout") {
-          // }
-          if (json.type === "locations") {
-            process.send({
-              type: "process:msg",
-              data: {
-                success: true,
-                type: json.type,
-                target: json.target,
-                pk: json.locationJson.id,
-                locationJson: json.locationJson,
-              },
-            });
+          process.send({
+            type: "process:msg",
+            data: {
+              success: true,
+              type: row.type,
+              target: row.target,
+              players: row.players,
+            },
+          });
+        } else if (row.type === "locations") {
+          try {
+            if (!ws.isSubscribed(row.target)) {
+              ws.subscribe(row.target);
+            }
+          } catch (e) {
+            console.log(e);
           }
-        } catch (e) {}
+          process.send({
+            type: "process:msg",
+            data: {
+              success: true,
+              type: row.type,
+              target: row.target,
+              pk: row.locationJson.id,
+              locationJson: row.locationJson,
+            },
+          });
+        } else if (row.type === "logout") {
+          // dev.log("여긴 와라 좀");
+          process.send({
+            type: "process:msg",
+            data: {
+              success: true,
+              type: row.type,
+              target: row.target,
+              players: row.players,
+            },
+          });
+        }
       }
+    } catch (e) {
+      // console.log(e);
     }
   });
   relay.client.on("error", function (chunk) {
@@ -375,20 +336,8 @@ async function clientRun(pusher, puller, ws) {
   relay.client.on("timeout", function (chunk) {
     console.log("timeout!");
   });
-  // relay.client.write(JSON.stringify(queryService.players));
 }
-
-// async function dataProcessor(msg) {
-//   console.log(msg);
-//   // console.log("sending data...");
-//   // await relay.push.send("test");
-//   // const [result] = await relay.push.receive();
-//   // dev.log(result);
-// }
 
 async function sendMessage(message) {
   relay.client.write(message);
-  // await relay.request.send(message);
-  // const [result] = await relay.request.receive();
-  // console.log(result);
 }

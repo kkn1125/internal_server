@@ -120,30 +120,50 @@ function connectSocket(connectionData) {
   ws.onmessage = (message) => {
     const { data } = message;
     // dev.alias("Socket Message").log(message);
+    // console.log(data);
     if (data instanceof ArrayBuffer) {
       for (let i = 0; i < Math.round(data.byteLength / packetLength); i++) {
         try {
           const json = Message.decode(
-            new Uint8Array(
-              data.slice(i * packetLength, i * packetLength + packetLength)
-            )
+            new Uint8Array(data.slice(i * packetLength, (i + 1) * packetLength))
           ).toJSON();
-          users.set(json.id, Object.assign(users.get(json.id), json));
+          users.set(json.id, Object.assign(users.get(json.id) || {}, json));
         } catch (e) {
           console.error(e);
         }
       }
     } else {
       const json = JSON.parse(data);
-      console.log(json);
+      // console.log(json);
       if (json instanceof Array) {
+        console.log("받음", json);
         for (let u of json) {
+          if (users.has(u.id)) continue;
           users.set(u.id, Object.assign(users.get(u.id) || {}, u));
         }
       } else if (json.type === "login") {
         for (let u of json.players) {
+          if (users.has(u.id)) continue;
           users.set(u.id, Object.assign(users.get(u.id) || {}, u));
         }
+      } else if (json.type === "logout") {
+        console.log("logout", json);
+        for (let u of users.values()) {
+          users.delete(u.id);
+        }
+        for (let u of json.players) {
+          users.set(u.id, u);
+        }
+        // for (let u of users.values()) {
+        //   const user = json.players.shift();
+        //   users.delete(u.id);
+        // }
+        // for (let u of json.players) {
+        // if (users.has(json.pk)) {
+        //   users.delete(json.pk);
+        // }
+        // users.set(u.id, Object.assign(users.get(u.id) || {}, u));
+        // }
       }
     }
   };

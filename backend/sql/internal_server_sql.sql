@@ -315,3 +315,17 @@ select * from locations;
 #     users ON allocation.user_id = users.id
 # WHERE
 #     allocation.user_id = users.id;
+
+SELECT
+      spaces.*,
+      channels.limit_amount as c_limit,
+      space_id AS id,
+      COUNT(DISTINCT(channel_id)) AS count,
+      COUNT(user_id) AS user_count
+    FROM allocation
+    LEFT JOIN spaces
+    ON spaces.id = allocation.space_id
+    LEFT JOIN channels
+    ON channels.id = allocation.channel_id
+    GROUP BY space_id
+    ORDER BY space_id;

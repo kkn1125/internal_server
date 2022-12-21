@@ -9,9 +9,10 @@
   "scripts": {
     "graph": "madge -i graph.svg index.js",
     "dev:api": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true nodemon index.js",
-    "start": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm2' pm2 start --watch ecosystem.config.js",
+    "start": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm2' pm2 start ecosystem.config.js",
     "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run start\"",
-    "log": "PM2_HOME='/root/.pm2' pm2 log"
+    "log": "PM2_HOME='/root/.pm2' pm2 log",
+    "kill": "PM2_HOME='/root/.pm2' pm2 kill"
   },
   "dependencies": {
     "axios": "^1.2.1",

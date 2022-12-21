@@ -47,7 +47,7 @@ for (let i = start; i < end; i++) {
   });
 }
 
-function connectSocket(connectionData) {
+function connectSocket(connectionData, i) {
   const {
     locale,
     socket,
@@ -88,7 +88,7 @@ function connectSocket(connectionData) {
         JSON.stringify({
           type: "login",
           pk: user.pk,
-          nickname: "guest-" + user.uuid.slice(0, 10),
+          nickname: "test-" + i,
           password: "1234",
           pox: 500 - game.size.user.x / 2,
           poy: 500 - game.size.user.x / 2,
@@ -131,28 +131,41 @@ function connectSocket(connectionData) {
 }
 
 // window.addEventListener("load", () => {
-for (let user of sockets.values()) {
-  const uuid = v4();
-  axios
-    .post(`http://192.168.254.16:3000/query/attach`, {
-      uuid: uuid,
-      email: "",
-      locale: "ko-kr",
-    })
-    .then((result) => {
-      const { data } = result;
-      console.log(data);
-      sockets.set(
-        uuid,
-        connectSocket(data)
-      );
-      attachUserData.pk = data.user.pk;
-      attachUserData.uuid = uuid;
-      users = data.players;
-    });
+// const values = sockets.values();
+// for (let i = 0; i < values.length; i++) {
+let index = 0;
+function attaching(number) {
+  for (let i = start; i < end; i++) {
+    // const user = values[i];
+    const uuid = v4();
+    // setTimeout(() => {
+    axios
+      .post(`http://192.168.254.16:3000/query/attach`, {
+        uuid: uuid,
+        email: "",
+        locale: "ko-kr",
+      })
+      .then((result) => {
+        const { data } = result;
+        // console.log(data);
+        sockets.set(uuid, connectSocket(data, 2 + i));
+        attachUserData.pk = data.user.pk;
+        attachUserData.uuid = uuid;
+        users = data.players;
+        // if (i < amount) {
+        //   setTimeout(() => {
+        //     attaching(i + 1);
+        //   }, 10);
+        // }
+      });
+  }
+  // }, 10);
 }
+// setTimeout(() => {
+attaching(start);
+// }, 10);
+// }
 // });
-
 
 // AxiosError: connect EADDRNOTAVAIL 127.0.0.1:3000 - Local (127.0.0.1:0)
 // 11|app   |     at AxiosError.from (/mnt/c/kkn_folder/test/internal_server/socket/node_modules/axios/dist/node/axios.cjs:785:14)
