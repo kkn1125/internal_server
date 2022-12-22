@@ -21,13 +21,22 @@ Field.d(5, "float", "required")(Message.prototype, "roy");
 
 // const __dirname = path.resolve();
 const mode = process.env.NODE_ENV;
+const MODE = process.env.MODE;
 const backpressure = 512;
+
 dotenv.config({
   path: path.join(__dirname, ".env"),
 });
-dotenv.config({
-  path: path.join(__dirname, `.env.${mode}`),
-});
+
+if (MODE === "local") {
+  dotenv.config({
+    path: path.join(__dirname, `.env.${MODE}`),
+  });
+} else if (MODE === "physic") {
+  dotenv.config({
+    path: path.join(__dirname, `.env.${MODE}`),
+  });
+}
 
 const host = process.env.HOST;
 const port = Number(process.env.PORT) || 10000;

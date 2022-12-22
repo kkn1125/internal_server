@@ -13,13 +13,18 @@ const connectionHandler = () => {
     start = new Date();
     // if (error) throw error;
     mariaConnection.on("error", (errorEvent) => {
-      if (errorEvent.code === "PROTOCOL_CONNECTION_LOST") {
-        let end = new Date();
-        console.log("종료될때까지 시간", end - start);
-        mariaConnection.destroy();
-        connectionHandler();
-      } else {
-        throw err;
+      try {
+        if (errorEvent.code === "PROTOCOL_CONNECTION_LOST") {
+          let end = new Date();
+          console.log("종료될때까지 시간", end - start);
+          mariaConnection.destroy();
+          setInterval(connectionHandler, 5000);
+        } else {
+          throw err;
+        }
+      } catch (e) {
+        console.log(e.message);
+        setInterval(connectionHandler, 5000);
       }
     });
     console.debug("MariaDB is Connected!");

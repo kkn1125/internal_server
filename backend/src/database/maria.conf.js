@@ -2,11 +2,18 @@ import path from "path";
 import dotenv from "dotenv";
 
 const mode = process.env.NODE_ENV;
+const MODE = process.env.MODE;
 const __dirname = path.resolve();
 
-dotenv.config({
-  path: path.join(__dirname, `.env.${mode}`),
-});
+if (MODE === "local") {
+  dotenv.config({
+    path: path.join(__dirname, `.env.${MODE}`),
+  });
+} else if (MODE === "physic") {
+  dotenv.config({
+    path: path.join(__dirname, `.env.${MODE}`),
+  });
+}
 
 // mariadb informations
 const {

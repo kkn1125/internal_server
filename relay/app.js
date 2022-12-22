@@ -8,7 +8,10 @@ dotenv.config({ path: path.join(__dirname, `.env.${process.env.NODE_ENV}`) });
 const serverHost = process.env.SERVER_HOST;
 const serverPort = process.env.SERVER_PORT;
 
-const relay = {};
+const relay = {
+  server: null,
+  client: new Map(),
+};
 
 // async function serverRun() {
 //   relay.server = new zmq.Reply();
@@ -77,3 +80,27 @@ relay.server.listen(serverPort, function () {
 process.on("SIGINT", function () {
   process.exit(0);
 });
+
+/* 다른 net과 연결 후 받는 데이터를 해당 net에서 전파 가능해야 함 */
+async function createClient(ip, port) {
+  const identity = [ip, port].join(":");
+  relay.client.set(
+    identity,
+    net.connect({
+      host: ip,
+      port: port,
+    })
+  );
+  relay.client.get(identity).on("connect", function () {
+    console.log("connected to server!");
+  });
+  relay.client.get(identity).on("data", function (data) {
+    const success = !socket.write(data);
+  });
+  relay.client.get(identity).on("error", function (chunk) {
+    console.log("error!");
+  });
+  relay.client.get(identity).on("timeout", function (chunk) {
+    console.log("timeout!");
+  });
+}
