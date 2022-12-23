@@ -7,8 +7,9 @@ export default defineConfig(({ command, mode, ssrBuild }) => {
   // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, process.cwd(), "");
 
+  const MODE = process.env.MODE;
   dotenv.config({
-    path: path.join(__dirname, `.env.${mode}`),
+    path: path.join(__dirname, `.env.development.${MODE}`),
   });
   const apiHost = process.env.VITE_API_HOST;
   const apiPort = process.env.VITE_API_PORT;

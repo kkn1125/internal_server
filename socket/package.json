@@ -8,9 +8,13 @@
   "description": "",
   "scripts": {
     "graph": "madge -i graph.svg index.js",
-    "dev:api": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true nodemon index.js",
-    "start": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm2' pm2 start ecosystem.config.js",
-    "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run start\"",
+    "start": "cross-env NODE_ENV=development MODE=dev CHOKIDAR_USEPOLLING=true nodemon index.js",
+    "local:socket": "cross-env NODE_ENV=development MODE=local CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm2' pm2 start ecosystem.config.js",
+    "physic:socket": "cross-env NODE_ENV=development MODE=physic CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm2' pm2 start ecosystem.config.js",
+    "prod:socket": "cross-env NODE_ENV=development MODE=prod CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm2' pm2 start ecosystem.config.js",
+    "local": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run local:socket\"",
+    "physic": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run physic:socket\"",
+    "prod": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run prod:socket\"",
     "log": "PM2_HOME='/root/.pm2' pm2 log",
     "kill": "PM2_HOME='/root/.pm2' pm2 kill"
   },

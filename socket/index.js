@@ -25,18 +25,8 @@ const MODE = process.env.MODE;
 const backpressure = 512;
 
 dotenv.config({
-  path: path.join(__dirname, ".env"),
+  path: path.join(__dirname, `.env.${mode}.${MODE}`),
 });
-
-if (MODE === "local") {
-  dotenv.config({
-    path: path.join(__dirname, `.env.${MODE}`),
-  });
-} else if (MODE === "physic") {
-  dotenv.config({
-    path: path.join(__dirname, `.env.${MODE}`),
-  });
-}
 
 const host = process.env.HOST;
 const port = Number(process.env.PORT) || 10000;

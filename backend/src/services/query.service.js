@@ -4,12 +4,20 @@ import Query from "../models/Query.js";
 import dotenv from "dotenv";
 import path from "path";
 
+const __dirname = path.resolve();
 const MODE = process.env.MODE;
+dotenv.config({
+  path: path.join(__dirname, ".env"),
+});
 if (MODE === "local") {
   dotenv.config({
     path: path.join(__dirname, `.env.${MODE}`),
   });
 } else if (MODE === "physic") {
+  dotenv.config({
+    path: path.join(__dirname, `.env.${MODE}`),
+  });
+} else if (MODE === "prod") {
   dotenv.config({
     path: path.join(__dirname, `.env.${MODE}`),
   });
@@ -19,8 +27,8 @@ const options = {
   cpu_usage: 80,
   memory_usage: 80,
   ip: {
-    socket: process.env.SOCKET_HOST||"192.168.254.16",
-    publisher: process.env.PUBLISHER_HOST||"192.168.254.16",
+    socket: process.env.SOCKET_HOST || "192.168.254.16",
+    publisher: process.env.PUBLISHER_HOST || "192.168.254.16",
   },
   port: {
     socket: 10000,

@@ -5,8 +5,12 @@
   "main": "index.js",
   "scripts": {
     "daemon": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true nodemon app.js",
-    "start": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm3' pm2 start ecosystem.config.js",
-    "dev": "concurrently --kill-others-on-fail \"bun run start\"",
+    "local:relay": "cross-env NODE_ENV=development MODE=local CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm3' pm2 start ecosystem.config.js",
+    "physic:relay": "cross-env NODE_ENV=development MODE=physic CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm3' pm2 start ecosystem.config.js",
+    "prod:relay": "cross-env NODE_ENV=development MODE=prod CHOKIDAR_USEPOLLING=true PM2_HOME='/root/.pm3' pm2 start ecosystem.config.js",
+    "local": "concurrently --kill-others-on-fail \"bun run local:relay\"",
+    "physic": "concurrently --kill-others-on-fail \"bun run physic:relay\"",
+    "prod": "concurrently --kill-others-on-fail \"bun run prod:relay\"",
     "log": "PM2_HOME='/root/.pm3' pm2 log",
     "kill": "PM2_HOME='/root/.pm3' pm2 kill"
   },

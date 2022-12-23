@@ -1,5 +1,5 @@
-#!usr/env/bin bash
+#!usr/bin/env bash
 
 # shopt -u dotglob && rm -rf /mnt/c/kkn_folder/project/medience/socket/*
 
-rsync -rv --exclude="./node_modules/:./copytorepo" ./* ../../project/medience/socket/
+rsync -rv --exclude=**/node_modules/ --exclude=./copytorepo ./* ../../project/medience/socket/

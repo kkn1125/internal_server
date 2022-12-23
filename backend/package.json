@@ -9,10 +9,12 @@
   "description": "",
   "scripts": {
     "graph": "madge -i graph.svg index.js",
-    "local:api": "cross-env NODE_ENV=development MODE=dev CHOKIDAR_USEPOLLING=true nodemon index.js",
+    "local:api": "cross-env NODE_ENV=development MODE=local CHOKIDAR_USEPOLLING=true nodemon index.js",
     "physic:api": "cross-env NODE_ENV=development MODE=physic CHOKIDAR_USEPOLLING=true nodemon index.js",
-    "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run local:api\"",
-    "physic": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run physic:api\""
+    "prod:api": "cross-env NODE_ENV=development MODE=prod CHOKIDAR_USEPOLLING=true nodemon index.js",
+    "local": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run local:api\"",
+    "physic": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run physic:api\"",
+    "prod": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run prod:api\""
   },
   "dependencies": {
     "cors": "^2.8.5",
