@@ -1,0 +1,5 @@
+#!usr/env/bin bash
+
+# shopt -u dotglob && rm -rf /mnt/c/kkn_folder/project/medience/socket/*
+
+rsync -rv --exclude=node_modules/ ./* ../../project/medience/socket/
