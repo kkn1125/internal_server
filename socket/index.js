@@ -10,6 +10,7 @@ const queryService = require("./src/services/query.service");
 const locationQueue = new Queue();
 const zmq = require("zeromq");
 const { dev } = require("./src/utils/tools");
+const net = require("net");
 
 const { Message, Field } = protobufjs;
 
@@ -35,7 +36,9 @@ const apiPort = Number(process.env.API_PORT) || 3000;
 const users = new Map();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-const relay = {};
+const relay = {
+  client: new Map(),
+};
 let now = null;
 
 let sockets = new Map();
@@ -88,7 +91,7 @@ const app = uWs
       ws.subscribe("broadcast");
       ws.subscribe(`${ws.space.pk}-${ws.channel.pk}`);
       console.log("A WebSocket connected with URL: " + ws.url);
-      clientRun(ws.socket, ws.publisher, ws);
+      clientRun(ws);
     },
     message: (ws, message, isBinary) => {
       /* Ok is false if backpressure was built up, wait for drain */
@@ -107,6 +110,7 @@ const app = uWs
         });
         if (ws.getBufferedAmount() < backpressure) {
           sendMessage(
+            ws,
             JSON.stringify({
               type: "locations",
               target: `${ws.space.pk}-${ws.channel.pk}`,
@@ -133,6 +137,7 @@ const app = uWs
               ws.send(JSON.stringify(data));
               if (ws.getBufferedAmount() < backpressure) {
                 sendMessage(
+                  ws,
                   JSON.stringify({
                     type: "players",
                     target: `${ws.space.pk}-${ws.channel.pk}`,
@@ -154,7 +159,7 @@ const app = uWs
     close: (ws, code, message) => {
       console.log("WebSocket closed");
       console.log(ws.user.pk);
-      // sendMessage(
+      // sendMessage(ws,
       //   JSON.stringify({
       //     type: "logout",
       //     target: `${ws.space.pk}-${ws.channel.pk}`,
@@ -171,6 +176,7 @@ const app = uWs
           // if (ws.getBufferedAmount() < backpressure) {
           // console.log(data);
           sendMessage(
+            ws,
             JSON.stringify({
               type: "logout",
               target: `${ws.space.pk}-${ws.channel.pk}`,
@@ -178,6 +184,7 @@ const app = uWs
             })
           );
           // }
+          relay.client.delete(ws);
         })
         .catch((err) => {});
     },
@@ -239,18 +246,25 @@ process.on("SIGINT", function () {
 
 /* zmq broker */
 let rest = "";
-async function clientRun(pusher, puller, ws) {
-  const net = require("net");
-  relay.client = net.connect({
-    host: puller.ip,
-    port: puller.port,
-  });
-  relay.client.on("connect", function () {
+async function clientRun(ws) {
+  relay.client.set(
+    ws,
+    net.connect({
+      host: ws.publisher.ip,
+      port: ws.publisher.port,
+    })
+  );
+  // relay.client = net.connect({
+  //   host: puller.ip,
+  //   port: puller.port,
+  // });
+  relay.client.get(ws).on("connect", function () {
     console.log("connected to server!");
   });
-  relay.client.on("data", function (chunk) {
+  relay.client.get(ws).on("data", function (chunk) {
     const decoded = decoder.decode(chunk);
     // console.log("decoded", decoded);
+    console.log("data", chunk);
     const lastIndex = decoded.lastIndexOf("}{");
     // console.log("lastIndex", lastIndex);
     rest = decoded;
@@ -329,14 +343,15 @@ async function clientRun(pusher, puller, ws) {
       // console.log(e);
     }
   });
-  relay.client.on("error", function (chunk) {
+  relay.client.get(ws).on("error", function (chunk) {
     console.log("error!");
+    console.log(chunk);
   });
-  relay.client.on("timeout", function (chunk) {
+  relay.client.get(ws).on("timeout", function (chunk) {
     console.log("timeout!");
   });
 }
 
-async function sendMessage(message) {
-  relay.client.write(message);
+async function sendMessage(ws, message) {
+  relay.client.get(ws).write(message);
 }

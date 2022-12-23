@@ -5,23 +5,12 @@ import dotenv from "dotenv";
 import path from "path";
 
 const __dirname = path.resolve();
+const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;
+
 dotenv.config({
-  path: path.join(__dirname, ".env"),
+  path: path.join(__dirname, `.env.${mode}.${MODE}`),
 });
-if (MODE === "local") {
-  dotenv.config({
-    path: path.join(__dirname, `.env.${MODE}`),
-  });
-} else if (MODE === "physic") {
-  dotenv.config({
-    path: path.join(__dirname, `.env.${MODE}`),
-  });
-} else if (MODE === "prod") {
-  dotenv.config({
-    path: path.join(__dirname, `.env.${MODE}`),
-  });
-}
 
 const options = {
   cpu_usage: 80,
@@ -36,8 +25,8 @@ const options = {
   },
   limit: {
     locales: 1000,
-    pool_sockets: 50,
-    pool_publishers: 1000,
+    pool_sockets: 5,
+    pool_publishers: 50,
     spaces: 5,
     channels: 50,
     users: 50,

@@ -329,3 +329,5 @@ SELECT
     ON channels.id = allocation.channel_id
     GROUP BY space_id
     ORDER BY space_id;
+    
+select * from pool_publishers;

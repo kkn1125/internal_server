@@ -26,7 +26,7 @@ const connectionHandler = () => {
         mariaConnection.destroy();
         setInterval(connectionHandler, 5000);
       } else {
-        throw err;
+        throw errorEvent;
       }
     } catch (e) {
       console.log(e.message);

@@ -9,7 +9,7 @@
   "description": "",
   "scripts": {
     "graph": "madge -i graph.svg assets/scripts/main.js",
-    "style": "CHOKIDAR_USEPOLLING=true sass --watch --no-source-map assets/styles/main.scss:assets/styles/main.css",
+    "style": "sass --watch --no-source-map assets/styles/main.scss:assets/styles/main.css",
     "local:front": "cross-env NODE_ENV=development MODE=local vite -c vite.config.js",
     "physic:front": "cross-env NODE_ENV=development MODE=physic vite -c vite.config.js",
     "prod:front": "cross-env NODE_ENV=development MODE=prod vite -c vite.config.js",

@@ -8,8 +8,8 @@
   "description": "",
   "scripts": {
     "graph": "madge -i graph.svg index.js",
-    "dev:api": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true nodemon index.js",
-    "start": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true pm2 start --watch ecosystem.config.js",
+    "dev:api": "cross-env NODE_ENV=development nodemon index.js",
+    "start": "cross-env NODE_ENV=development pm2 start --watch ecosystem.config.js",
     "dev": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run start\""
   },
   "dependencies": {

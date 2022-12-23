@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;
 // const __dirname = path.resolve();
+console.log(mode, MODE)
 dotenv.config({
   path: path.join(path.resolve(), `.env.${mode}.${MODE}`),
 });
