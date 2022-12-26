@@ -3,6 +3,8 @@ const dotenv = require("dotenv");
 const path = require("path");
 const net = require("net");
 const queryService = require("./src/services/query.service");
+const { dev } = require("./src/utils/tools");
+const { exec } = require("child_process");
 // const queryService = require("../socket/src/services/query.service");
 // const __dirname = path.resolve();
 
@@ -48,7 +50,6 @@ let tcpSockets = [];
 
 relay.server = net.createServer((socket) => {
   tcpSockets.push(socket);
-  serverSocket = socket;
   socket.setMaxListeners(5000);
   console.log(socket.address().address + "connected");
   process.send("ready");
@@ -58,6 +59,7 @@ relay.server = net.createServer((socket) => {
     // if (maxBinary) {
     // messageQueue.push(data);
     // }
+    serverSocket = socket;
     console.log("데이터 받음");
     temp = data;
     const success = !socket.write(data);
@@ -93,6 +95,7 @@ function broadcast(data, socketSent) {
   for (let i = 0; i < tcpSockets.length; i++) {
     const socket = tcpSockets[i];
     if (socket !== socketSent) {
+      dev.alias("socket identity").log(i, socket);
       socket.write(data);
     }
   }
@@ -128,7 +131,7 @@ async function createClient(ip, port) {
   relay.client.get(identity).on("data", function (data) {
     // const success = !socket.write(data);
     // console.log(123);
-    const success = !getServerSocket()?.write(data);
+    const success = !serverSocket?.write(data);
     console.log("success:", success);
   });
   relay.client.get(identity).on("error", function (chunk) {
@@ -142,19 +145,40 @@ async function createClient(ip, port) {
 setInterval(() => {
   queryService
     .autoConnectServers()
-    .then((publishers) => {
-      isChanged = publishers;
+    .then(({ publishers, connections }) => {
+      // isChanged = publishers;
       for (let i = 0; i < publishers.length; i++) {
-        const { ip, port } = publishers[i];
+        // const conn =  connections[i];
+        // if(conn) {
+        //   conn.limit_amount
+        // }
+        const { ip, port, limit_amount } = publishers[i];
+
+        // if(limit_amount)
         const reverseIp = ip === "192.168.254.16" ? "192.168.88.234" : ip;
         // console.log(originIp === reverseIp, port, serverPort)
-        if (originIp !== reverseIp) {
-          if (serverPort !== port) {
-            if (!relay.client.has(`${reverseIp}:${port}`)) {
-              console.log(`servers ip, port:`, originIp, serverPort);
-              console.log(`not exists ip, port:`, reverseIp, port);
-              createClient(reverseIp, port);
-            }
+        if (originIp !== reverseIp || serverPort !== port) {
+          // if (serverPort !== port) {
+          if (!relay.client.has(`${reverseIp}:${port}`)) {
+            console.log(`servers ip, port:`, originIp, serverPort);
+            console.log(`not exists ip, port:`, reverseIp, port);
+            createClient(reverseIp, port);
+
+            exec(`lsof -i :${port}`, (err, stdout, stderr) => {
+              if (err) {
+                console.log("err:", err.message);
+                exec(
+                  `cross-env NODE_ENV=${mode} MODE=${MODE} IP_ADDRESS=${reverseIp} PM2_HOME='/root/.pm3' CHOKIDAR_USEPOLLING=true PORT=${port} nodemon app.js`
+                );
+                excuteList[port - 20000] = true;
+                return;
+              }
+              if (stderr) {
+                console.log("stderr:", stderr);
+                return;
+              }
+              console.log("stdout:", stdout);
+            });
           }
         }
       }

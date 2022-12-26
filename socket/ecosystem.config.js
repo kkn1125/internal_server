@@ -9,10 +9,10 @@ module.exports = {
       increment_var: "PORT",
       exec_mode: "cluster",
       wait_ready: true,
-      ignore_watch: ['dummy*'],
+      ignore_watch: ["dummy*"],
       env: {
-        PORT: 10000
-      }
+        PORT: 10000,
+      },
     },
   ],
 

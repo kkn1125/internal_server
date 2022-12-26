@@ -330,4 +330,14 @@ SELECT
     GROUP BY space_id
     ORDER BY space_id;
     
+select * from connection;
+
 select * from pool_publishers;
+
+SELECT 
+    pool_publishers.*, COUNT(*) AS publisher_count
+FROM
+    connection
+        LEFT JOIN
+    pool_publishers ON pool_publishers.id = connection.publisher_id
+GROUP BY publisher_id;

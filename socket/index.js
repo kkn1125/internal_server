@@ -172,7 +172,7 @@ const app = uWs
         })
         .then((result) => {
           const { data } = result;
-          console.log(data, "여기!");
+          // console.log(data, "여기!");
           // if (ws.getBufferedAmount() < backpressure) {
           // console.log(data);
           sendMessage(
@@ -184,6 +184,7 @@ const app = uWs
             })
           );
           // }
+          relay.client.get(ws).destroy();
           relay.client.delete(ws);
         })
         .catch((err) => {});
@@ -288,7 +289,7 @@ async function clientRun(ws) {
         // if (row.type !== "logout") {
 
         // }
-        console.log(row);
+        dev.alias("relay에서 받음").log(row);
         if (row.type === "players") {
           console.log("net tcp player");
           console.log(row.target);

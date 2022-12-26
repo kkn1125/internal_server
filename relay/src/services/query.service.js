@@ -51,7 +51,16 @@ Query.autoConnectServers = async () => {
   const [publishers] = await sql
     .promise()
     .query(`SELECT * FROM pool_publishers`);
-  return publishers;
+
+  const [connections] = await sql.promise().query(`SELECT 
+    pool_publishers.*, COUNT(*) AS publisher_count
+  FROM
+    connection
+      LEFT JOIN
+    pool_publishers ON pool_publishers.id = connection.publisher_id
+  GROUP BY publisher_id`);
+
+  return { publishers, connections };
 };
 
 const queryService = Query;

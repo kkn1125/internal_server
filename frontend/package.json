@@ -15,7 +15,8 @@
     "prod:front": "cross-env NODE_ENV=development MODE=prod vite -c vite.config.js",
     "local": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run style\" \"bun run local:front\"",
     "physic": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run style\" \"bun run physic:front\"",
-    "prod": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run style\" \"bun run prod:front\""
+    "prod": "concurrently --kill-others-on-fail \"bun run graph\" \"bun run style\" \"bun run prod:front\"",
+    "build": "vite build"
   },
   "dependencies": {
     "axios": "^1.2.1",

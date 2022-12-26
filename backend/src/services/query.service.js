@@ -16,8 +16,8 @@ const options = {
   cpu_usage: 80,
   memory_usage: 80,
   ip: {
-    socket: process.env.SOCKET_HOST || "192.168.254.16",
-    publisher: process.env.PUBLISHER_HOST || "192.168.254.16",
+    socket: process.env.SOCKET_HOST || "192.168.88.234",
+    publisher: process.env.PUBLISHER_HOST || "192.168.88.234",
   },
   port: {
     socket: 10000,
@@ -26,7 +26,7 @@ const options = {
   limit: {
     locales: 1000,
     pool_sockets: 5,
-    pool_publishers: 50,
+    pool_publishers: 5,
     spaces: 5,
     channels: 50,
     users: 50,
@@ -129,13 +129,29 @@ async function autoInsertUser(data, locale, dataMap) {
         .promise()
         .query(`SHOW TABLE STATUS WHERE name = 'pool_sockets'`);
       const socketPk = readSocket[0].Auto_increment;
+      const [sockets] = await sql
+        .promise()
+        .query(`SELECT port FROM pool_sockets`);
+      let portCompare = 0;
+      for (let i = 0; i < sockets.length - 1; i++) {
+        const prevSock = sockets[i];
+        const nextSock = sockets[i];
+        if (prevSock.port + 1 !== nextSock.port) {
+          portCompare = prevSock.port - options.port.socket + 1;
+          break;
+        }
+      }
+      if (portCompare === 0 && sockets.length !== 0) {
+        portCompare = sockets.slice(-1)[0].port - options.port.socket + 1;
+      }
+
       await sql.promise().query(
         `INSERT INTO pool_sockets
       (ip, port, cpu_usage, memory_usage, is_live, limit_amount)
       VALUES (?, ?, ?, ?, ?, ?)`,
         [
           options.ip.socket,
-          options.port.socket + socketPk - 1,
+          options.port.socket + portCompare,
           options.cpu_usage,
           options.memory_usage,
           true,
@@ -147,7 +163,7 @@ async function autoInsertUser(data, locale, dataMap) {
       dataMap.socket = Object.assign(dataMap.socket || {}, {
         pk: (isExistsSocket[isExistsSocket.length - 1]?.id || 0) + 1,
         ip: options.ip.socket,
-        port: options.port.socket + socketPk - 1,
+        port: options.port.socket + portCompare,
       });
     }
 
@@ -185,14 +201,29 @@ async function autoInsertUser(data, locale, dataMap) {
       const [readPublisher] = await sql
         .promise()
         .query(`SHOW TABLE STATUS WHERE name = 'pool_publishers'`);
-      const publisherPk = readPublisher[0].Auto_increment;
+      const [publishers] = await sql
+        .promise()
+        .query(`SELECT port FROM pool_publishers`);
+      let portCompare = 0;
+      for (let i = 0; i < publishers.length - 1; i++) {
+        const prevPub = publishers[i];
+        const nextPub = publishers[i];
+        if (prevPub.port + 1 !== nextPub.port) {
+          portCompare = prevPub.port - options.port.publisher + 1;
+          break;
+        }
+      }
+      if (portCompare === 0 && publishers.length !== 0) {
+        portCompare = publishers.slice(-1)[0].port - options.port.publisher + 1;
+      }
+      // const publisherPk = readPublisher[0].Auto_increment;
       await sql.promise().query(
         `INSERT INTO pool_publishers
-      (ip, port, is_live, limit_amount)
-      VALUES (?, ?, ?, ?)`,
+        (ip, port, is_live, limit_amount)
+        VALUES (?, ?, ?, ?)`,
         [
           options.ip.publisher,
-          options.port.publisher + publisherPk - 1,
+          options.port.publisher + portCompare,
           true,
           options.limit.pool_publishers,
         ]
@@ -202,7 +233,7 @@ async function autoInsertUser(data, locale, dataMap) {
       dataMap.publisher = Object.assign(dataMap.publisher || {}, {
         pk: (isExistsPublisher[isExistsPublisher.length - 1]?.id || 0) + 1,
         ip: options.ip.publisher,
-        port: options.port.publisher + publisherPk - 1,
+        port: options.port.publisher + portCompare,
       });
     }
     /* 풀 소켓, 퍼블리셔 존재 여부 조회 끝 */
