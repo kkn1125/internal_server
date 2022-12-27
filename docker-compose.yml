@@ -1,0 +1,194 @@
+version: "3.8"
+
+services:
+  back:
+    image: node:lts
+    command: nodemon index.js
+    container_name: back
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - 3001:3001
+    working_dir: /home/
+    volumes:
+      - ./backend/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3001
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      SOCKET_HOST: 192.168.88.234
+      PUBLISHER_HOST: 192.168.88.234
+
+  front:
+    image: node:lts
+    command: vite --config vite.config.js
+    container_name: front
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - 5001:5001
+    working_dir: /home/
+    volumes:
+      - ./frontend/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      PORT: 5001
+      VITE_API_HOST: 192.168.88.234
+      VITE_API_PORT: 3001
+
+  socket:
+    image: node:lts
+    command: nodemon index.js
+    container_name: socket
+    build:
+      context: .
+      dockerfile: ./socket/Dockerfile
+    ports:
+      - 10000:10000
+    working_dir: /home/
+    volumes:
+      - ./socket/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      PORT: 10000
+      NODE_ENV: production
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      API_HOST: 192.168.88.234
+      API_PORT: 3001
+
+  publisher:
+    image: node:lts
+    command: nodemon index.js
+    container_name: publisher
+    build:
+      context: .
+      dockerfile: ./relay/Dockerfile
+    ports:
+      - 20000:20000
+    working_dir: /home/
+    volumes:
+      - ./relay/:/home
+      # - /home/node_modules/
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 20000
+      NODE_ENV: production
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      IP_ADDRESS: 192.168.88.234
+
+  back2:
+    image: node:lts
+    command: nodemon index.js
+    container_name: back2
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - 3002:3002
+    working_dir: /home/
+    volumes:
+      - ./backend/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3002
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      SOCKET_HOST: 192.168.88.234
+      PUBLISHER_HOST: 192.168.88.234
+
+  front2:
+    image: node:lts
+    command: vite --config vite.config.js
+    container_name: front2
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - 5002:5002
+    working_dir: /home/
+    volumes:
+      - ./frontend/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      NODE_ENV: production
+      PORT: 5002
+      VITE_API_HOST: 192.168.88.234
+      VITE_API_PORT: 3002
+
+  socket2:
+    image: node:lts
+    command: nodemon index.js
+    container_name: socket2
+    build:
+      context: .
+      dockerfile: ./socket/Dockerfile
+    ports:
+      - 10001:10001
+    working_dir: /home/
+    volumes:
+      - ./socket/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      PORT: 10001
+      NODE_ENV: production
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      API_HOST: 192.168.88.234
+      API_PORT: 3002
+
+  publisher2:
+    image: node:lts
+    command: nodemon index.js
+    container_name: publisher2
+    build:
+      context: .
+      dockerfile: ./relay/Dockerfile
+    ports:
+      - 20001:20001
+    working_dir: /home/
+    volumes:
+      - ./relay/:/home
+      # - /home/node_modules/
+    environment:
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 20001
+      NODE_ENV: production
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      IP_ADDRESS: 192.168.88.234
+      # HOST: 0.0.0.0
+      # PORT: 5001
+      # VITE_API_HOST: 192.168.88.234
+      # VITE_API_PORT: 3001

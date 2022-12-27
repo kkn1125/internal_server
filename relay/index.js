@@ -10,9 +10,15 @@ const { exec } = require("child_process");
 
 const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;
-dotenv.config({
-  path: path.join(path.resolve(), `.env.${mode}.${MODE}`),
-});
+
+if (mode === "development") {
+  dotenv.config({
+    path: path.join(path.resolve(), `.env`),
+  });
+  dotenv.config({
+    path: path.join(path.resolve(), `.env.${mode}.${MODE}`),
+  });
+}
 
 const originIp = process.env.IP_ADDRESS;
 const serverHost = process.env.SERVER_HOST;
@@ -95,7 +101,8 @@ function broadcast(data, socketSent) {
   for (let i = 0; i < tcpSockets.length; i++) {
     const socket = tcpSockets[i];
     if (socket !== socketSent) {
-      dev.alias("socket identity").log(i, socket);
+      console.log("socket", i);
+      // dev.alias("socket identity").log(i, socket);
       socket.write(data);
     }
   }
@@ -131,8 +138,16 @@ async function createClient(ip, port) {
   relay.client.get(identity).on("data", function (data) {
     // const success = !socket.write(data);
     // console.log(123);
-    const success = !serverSocket?.write(data);
-    console.log("success:", success);
+    // const success = !serverSocket?.write(data);
+    // for (let i = 0; i < tcpSockets.length; i++) {
+    //   const socket = tcpSockets[i];
+    //   if (socket !== socketSent) {
+    //     console.log("socket", i);
+    //     // dev.alias("socket identity").log(i, socket);
+        const success = !relay.client.get(identity).write(data);
+        console.log("success:", success);
+      // }
+    // }
   });
   relay.client.get(identity).on("error", function (chunk) {
     console.log("error!");
@@ -164,21 +179,21 @@ setInterval(() => {
             console.log(`not exists ip, port:`, reverseIp, port);
             createClient(reverseIp, port);
 
-            exec(`lsof -i :${port}`, (err, stdout, stderr) => {
-              if (err) {
-                console.log("err:", err.message);
-                exec(
-                  `cross-env NODE_ENV=${mode} MODE=${MODE} IP_ADDRESS=${reverseIp} PM2_HOME='/root/.pm3' CHOKIDAR_USEPOLLING=true PORT=${port} nodemon app.js`
-                );
-                excuteList[port - 20000] = true;
-                return;
-              }
-              if (stderr) {
-                console.log("stderr:", stderr);
-                return;
-              }
-              console.log("stdout:", stdout);
-            });
+            // exec(`lsof -i :${port}`, (err, stdout, stderr) => {
+            //   if (err) {
+            //     console.log("err:", err.message);
+            //     exec(
+            //       `cross-env NODE_ENV=${mode} MODE=${MODE} IP_ADDRESS=${reverseIp} PM2_HOME='/root/.pm3' CHOKIDAR_USEPOLLING=true PORT=${port} nodemon app.js`
+            //     );
+            //     excuteList[port - 20000] = true;
+            //     return;
+            //   }
+            //   if (stderr) {
+            //     console.log("stderr:", stderr);
+            //     return;
+            //   }
+            //   console.log("stdout:", stdout);
+            // });
           }
         }
       }

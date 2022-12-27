@@ -4,9 +4,15 @@ const dotenv = require("dotenv");
 const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;
 // const __dirname = path.resolve();
-dotenv.config({
-  path: path.join(path.resolve(), `.env.${mode}.${MODE}`),
-});
+
+if (mode === "development") {
+  dotenv.config({
+    path: path.join(path.resolve(), `.env`),
+  });
+  dotenv.config({
+    path: path.join(path.resolve(), `.env.${mode}.${MODE}`),
+  });
+}
 
 // mariadb informations
 const {

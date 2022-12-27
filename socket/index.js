@@ -25,9 +25,14 @@ const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;
 const backpressure = 512;
 
-dotenv.config({
-  path: path.join(__dirname, `.env.${mode}.${MODE}`),
-});
+if (mode === "development") {
+  dotenv.config({
+    path: path.join(__dirname, `.env`),
+  });
+  dotenv.config({
+    path: path.join(__dirname, `.env.${mode}.${MODE}`),
+  });
+}
 
 const host = process.env.HOST;
 const port = Number(process.env.PORT) || 10000;
@@ -53,31 +58,33 @@ const app = uWs
     /* Handlers */
     upgrade: (res, req, context) => {
       const q = req.getQuery("q");
-      const json = JSON.parse(decodeURI(q));
-      console.log(
-        "An Http connection wants to become WebSocket, URL: " +
-          req.getUrl() +
-          "!"
-      );
-      /* This immediately calls open handler, you must not use res after this call */
-      res.upgrade(
-        {
-          url: req.getUrl(),
-          user: json.user,
-          space: json.space,
-          channel: json.channel,
-          locale: json.locale,
-          socket: json.socket,
-          publisher: json.publisher,
-          connection: json.connection,
-          allocation: json.allocation,
-        },
-        /* Spell these correctly */
-        req.getHeader("sec-websocket-key"),
-        req.getHeader("sec-websocket-protocol"),
-        req.getHeader("sec-websocket-extensions"),
-        context
-      );
+      try {
+        const json = JSON.parse(decodeURI(q));
+        console.log(
+          "An Http connection wants to become WebSocket, URL: " +
+            req.getUrl() +
+            "!"
+        );
+        /* This immediately calls open handler, you must not use res after this call */
+        res.upgrade(
+          {
+            url: req.getUrl(),
+            user: json.user,
+            space: json.space,
+            channel: json.channel,
+            locale: json.locale,
+            socket: json.socket,
+            publisher: json.publisher,
+            connection: json.connection,
+            allocation: json.allocation,
+          },
+          /* Spell these correctly */
+          req.getHeader("sec-websocket-key"),
+          req.getHeader("sec-websocket-protocol"),
+          req.getHeader("sec-websocket-extensions"),
+          context
+        );
+      } catch (e) {}
     },
     open: (ws) => {
       console.log(Object.assign({}, ws));
@@ -233,6 +240,30 @@ pm2.launchBus((err, bus) => {
   });
 });
 
+function publishData(data) {
+  if (data.type === "players") {
+    console.log("packet", data.target);
+    console.log("packet", data.players);
+    app.publish(data.target, JSON.stringify(data.players));
+  } else if (data.type === "locations") {
+    now = data.target;
+    const encoded = Message.encode(
+      new Message({
+        id: data.pk,
+        pox: data.locationJson.pox,
+        poy: data.locationJson.poy,
+        poz: data.locationJson.poz,
+        roy: data.locationJson.roy,
+      })
+    ).finish();
+    app.publish(data.target, encoded, true, true);
+  } else if (data.type === "logout") {
+    // console.log("여긴오냐");
+    now = data.target;
+    app.publish(data.target, JSON.stringify(data));
+  }
+}
+
 // setInterval(() => {
 //   // if (ws.getBufferedAmount() < backpressure) {
 //   if (locationQueue.count > 0 && now) {
@@ -300,14 +331,21 @@ async function clientRun(ws) {
           } catch (e) {
             // console.log(e);
           }
-          process.send({
-            type: "process:msg",
-            data: {
-              success: true,
-              type: row.type,
-              target: row.target,
-              players: row.players,
-            },
+          // TODO: pm2 사용할 때만 활성화
+          // process.send({
+          //   type: "process:msg",
+          //   data: {
+          //     success: true,
+          //     type: row.type,
+          //     target: row.target,
+          //     players: row.players,
+          //   },
+          // });
+          publishData({
+            success: true,
+            type: row.type,
+            target: row.target,
+            players: row.players,
           });
         } else if (row.type === "locations") {
           try {
@@ -317,26 +355,41 @@ async function clientRun(ws) {
           } catch (e) {
             console.log(e);
           }
-          process.send({
-            type: "process:msg",
-            data: {
-              success: true,
-              type: row.type,
-              target: row.target,
-              pk: row.locationJson.id,
-              locationJson: row.locationJson,
-            },
+          // TODO: pm2 사용할 때만 활성화
+          // process.send({
+          //   type: "process:msg",
+          //   data: {
+          //     success: true,
+          //     type: row.type,
+          //     target: row.target,
+          //     pk: row.locationJson.id,
+          //     locationJson: row.locationJson,
+          //   },
+          // });
+          publishData({
+            success: true,
+            type: row.type,
+            target: row.target,
+            pk: row.locationJson.id,
+            locationJson: row.locationJson,
           });
         } else if (row.type === "logout") {
           // dev.log("여긴 와라 좀");
-          process.send({
-            type: "process:msg",
-            data: {
-              success: true,
-              type: row.type,
-              target: row.target,
-              players: row.players,
-            },
+          // TODO: pm2 사용할 때만 활성화
+          // process.send({
+          //   type: "process:msg",
+          //   data: {
+          //     success: true,
+          //     type: row.type,
+          //     target: row.target,
+          //     players: row.players,
+          //   },
+          // });
+          publishData({
+            success: true,
+            type: row.type,
+            target: row.target,
+            players: row.players,
           });
         }
       }

@@ -10,7 +10,7 @@ RUN . "$NVM_DIR/nvm.sh" && nvm install ${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm use v${NODE_VERSION}
 RUN . "$NVM_DIR/nvm.sh" && nvm alias default v${NODE_VERSION}
 ENV PATH="/root/.nvm/versions/node/v${NODE_VERSION}/bin/:${PATH}"
-RUN curl -fsSL https://bun.sh/install | bash
+# RUN curl -fsSL https://bun.sh/install | bash
 RUN npm install -g npm@latest
 RUN npm install -g cross-env nodemon dotenv vite pm2 concurrently sass madge
 RUN node --version
@@ -22,4 +22,4 @@ RUN npm install
 
 # EXPOSE 80
 
-CMD ["npm","run","local"]
+# CMD ["npm","run","local"]

@@ -8,9 +8,14 @@ const __dirname = path.resolve();
 const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;
 
-dotenv.config({
-  path: path.join(__dirname, `.env.${mode}.${MODE}`),
-});
+if (mode === "development") {
+  dotenv.config({
+    path: path.join(__dirname, `.env`),
+  });
+  dotenv.config({
+    path: path.join(__dirname, `.env.${mode}.${MODE}`),
+  });
+}
 
 const options = {
   cpu_usage: 80,
