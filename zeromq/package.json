@@ -5,11 +5,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module",
   "description": "",
   "scripts": {
     "graph": "madge -i graph.svg index.js",
-    "local:api": "cross-env NODE_ENV=development CHOKIDAR_USEPOLLING=true nodemon index.js",
+    "local:api": "cross-env NODE_ENV=development MODE=local CHOKIDAR_USEPOLLING=true nodemon index.js",
     "local": "concurrently --kill-others-on-fail \"npm run graph\" \"npm run local:api\""
   },
   "dependencies": {
@@ -17,6 +16,7 @@
     "cross-env": "^7.0.3",
     "dotenv": "^16.0.3",
     "esm": "^3.2.25",
+    "mysql2": "^2.3.3",
     "protobufjs": "^7.1.2",
     "zeromq": "6.0.0-beta.16"
   },

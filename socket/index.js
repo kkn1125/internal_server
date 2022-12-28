@@ -42,7 +42,8 @@ const users = new Map();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const relay = {
-  client: new Map(),
+  client: null,
+  subscriber: null,
 };
 let now = null;
 
@@ -99,21 +100,20 @@ const app = uWs
       ws.subscribe(`${ws.space.pk}-${ws.channel.pk}`);
       console.log("A WebSocket connected with URL: " + ws.url);
       clientRun(ws);
+      pullerRun(ws);
     },
     message: (ws, message, isBinary) => {
       /* Ok is false if backpressure was built up, wait for drain */
       if (isBinary) {
         const locationJson = Message.decode(new Uint8Array(message)).toJSON();
         queryService.updateLocation({
-          body: {
-            pk: ws.user.pk,
-            space: ws.space.pk,
-            channel: ws.channel.pk,
-            pox: locationJson.pox,
-            poy: locationJson.poy,
-            poz: locationJson.poz,
-            roy: locationJson.roy,
-          },
+          pk: ws.user.pk,
+          space: ws.space.pk,
+          channel: ws.channel.pk,
+          pox: locationJson.pox,
+          poy: locationJson.poy,
+          poz: locationJson.poz,
+          roy: locationJson.roy,
         });
         if (ws.getBufferedAmount() < backpressure) {
           sendMessage(
@@ -191,8 +191,9 @@ const app = uWs
             })
           );
           // }
-          relay.client.get(ws).destroy();
-          relay.client.delete(ws);
+          relay.client.destroy();
+          // relay.client.get(ws).destroy();
+          // relay.client.delete(ws);
         })
         .catch((err) => {});
     },
@@ -209,36 +210,37 @@ const app = uWs
     }
   });
 
-pm2.launchBus((err, bus) => {
-  if (err) return;
-  bus.on("process:msg", function (packet) {
-    if (packet.hasOwnProperty("raw")) {
-    } else {
-      const { data } = packet;
-      if (data.type === "players") {
-        console.log("packet", data.target);
-        console.log("packet", data.players);
-        app.publish(data.target, JSON.stringify(data.players));
-      } else if (data.type === "locations") {
-        now = data.target;
-        const encoded = Message.encode(
-          new Message({
-            id: data.pk,
-            pox: data.locationJson.pox,
-            poy: data.locationJson.poy,
-            poz: data.locationJson.poz,
-            roy: data.locationJson.roy,
-          })
-        ).finish();
-        app.publish(data.target, encoded, true, true);
-      } else if (data.type === "logout") {
-        // console.log("여긴오냐");
-        now = data.target;
-        app.publish(data.target, JSON.stringify(data));
-      }
-    }
-  });
-});
+// TODO: pm2 사용할 때만 활성화
+// pm2.launchBus((err, bus) => {
+//   if (err) return;
+//   bus.on("process:msg", function (packet) {
+//     if (packet.hasOwnProperty("raw")) {
+//     } else {
+//       const { data } = packet;
+//       if (data.type === "players") {
+//         console.log("packet", data.target);
+//         console.log("packet", data.players);
+//         app.publish(data.target, JSON.stringify(data.players));
+//       } else if (data.type === "locations") {
+//         now = data.target;
+//         const encoded = Message.encode(
+//           new Message({
+//             id: data.pk,
+//             pox: data.locationJson.pox,
+//             poy: data.locationJson.poy,
+//             poz: data.locationJson.poz,
+//             roy: data.locationJson.roy,
+//           })
+//         ).finish();
+//         app.publish(data.target, encoded, true, true);
+//       } else if (data.type === "logout") {
+//         // console.log("여긴오냐");
+//         now = data.target;
+//         app.publish(data.target, JSON.stringify(data));
+//       }
+//     }
+//   });
+// });
 
 function publishData(data) {
   if (data.type === "players") {
@@ -278,27 +280,178 @@ process.on("SIGINT", function () {
 
 /* zmq broker */
 let rest = "";
+
+async function sendMessage(ws, data) {
+  try {
+    await relay.client.send(data);
+    const [result] = await relay.client.receive();
+    console.log("Received ", result);
+  } catch (e) {
+    console.log("error!", e);
+  }
+}
+
 async function clientRun(ws) {
-  relay.client.set(
-    ws,
-    net.connect({
-      host: ws.publisher.ip,
-      port: ws.publisher.port,
-    })
+  //  Hello World client
+  relay.client = new zmq.Request();
+  relay.client.connect(`tcp://${ws.publisher.ip}:${ws.publisher.port}`);
+  console.log(
+    `client connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
   );
-  // relay.client = net.connect({
-  //   host: puller.ip,
-  //   port: puller.port,
+
+  // await sendMessage(
+  //   JSON.stringify({
+  //     test: 1,
+  //   })
+  // );
+  // relay.client.set(
+  //   ws,
+  //   net.connect({
+  //     host: ws.publisher.ip,
+  //     port: ws.publisher.port,
+  //   })
+  // );
+  // // relay.client = net.connect({
+  // //   host: puller.ip,
+  // //   port: puller.port,
+  // // });
+  // relay.client.get(ws).on("connect", function () {
+  //   console.log("connected to server!");
   // });
-  relay.client.get(ws).on("connect", function () {
-    console.log("connected to server!");
-  });
-  relay.client.get(ws).on("data", function (chunk) {
-    const decoded = decoder.decode(chunk);
-    // console.log("decoded", decoded);
-    console.log("data", chunk);
+  // relay.client.get(ws).on("data", function (chunk) {
+  //   const decoded = decoder.decode(chunk);
+  //   // console.log("decoded", decoded);
+  //   console.log("data", chunk);
+  //   const lastIndex = decoded.lastIndexOf("}{");
+  //   // console.log("lastIndex", lastIndex);
+  //   rest = decoded;
+  //   let result = null;
+  //   if (lastIndex > 0) {
+  //     result = rest.slice(0, lastIndex + 1);
+  //     rest = rest.slice(lastIndex + 1);
+  //   } else {
+  //     result = rest;
+  //     rest = "";
+  //   }
+  //   // console.log("last", last);
+  //   try {
+  //     // console.log("received:", "[" + last.replace(/}{/g, "},{") + "]");
+  //     const decodeList = JSON.parse("[" + result.replace(/}{/g, "},{") + "]");
+  //     for (let i = 0; i < decodeList.length; i++) {
+  //       const row = decodeList[i];
+  //       // console.log("row", row);
+  //       // const json = JSON.parse(row);
+  //       // console.log("json data", row);
+  //       // if (row.type !== "logout") {
+
+  //       // }
+  //       dev.alias("relay에서 받음").log(row);
+  //       if (row.type === "players") {
+  //         console.log("net tcp player");
+  //         console.log(row.target);
+  //         try {
+  //           if (!ws.isSubscribed(row.target)) {
+  //             ws.subscribe(row.target);
+  //           }
+  //         } catch (e) {
+  //           // console.log(e);
+  //         }
+  //         // TODO: pm2 사용할 때만 활성화
+  //         // process.send({
+  //         //   type: "process:msg",
+  //         //   data: {
+  //         //     success: true,
+  //         //     type: row.type,
+  //         //     target: row.target,
+  //         //     players: row.players,
+  //         //   },
+  //         // });
+  //         publishData({
+  //           success: true,
+  //           type: row.type,
+  //           target: row.target,
+  //           players: row.players,
+  //         });
+  //       } else if (row.type === "locations") {
+  //         try {
+  //           if (!ws.isSubscribed(row.target)) {
+  //             ws.subscribe(row.target);
+  //           }
+  //         } catch (e) {
+  //           console.log(e);
+  //         }
+  //         // TODO: pm2 사용할 때만 활성화
+  //         // process.send({
+  //         //   type: "process:msg",
+  //         //   data: {
+  //         //     success: true,
+  //         //     type: row.type,
+  //         //     target: row.target,
+  //         //     pk: row.locationJson.id,
+  //         //     locationJson: row.locationJson,
+  //         //   },
+  //         // });
+  //         publishData({
+  //           success: true,
+  //           type: row.type,
+  //           target: row.target,
+  //           pk: row.locationJson.id,
+  //           locationJson: row.locationJson,
+  //         });
+  //       } else if (row.type === "logout") {
+  //         // dev.log("여긴 와라 좀");
+  //         // TODO: pm2 사용할 때만 활성화
+  //         // process.send({
+  //         //   type: "process:msg",
+  //         //   data: {
+  //         //     success: true,
+  //         //     type: row.type,
+  //         //     target: row.target,
+  //         //     players: row.players,
+  //         //   },
+  //         // });
+  //         publishData({
+  //           success: true,
+  //           type: row.type,
+  //           target: row.target,
+  //           players: row.players,
+  //         });
+  //       }
+  //     }
+  //   } catch (e) {
+  //     // console.log(e);
+  //   }
+  // });
+  // relay.client.get(ws).on("error", function (chunk) {
+  //   console.log("error!");
+  //   console.log(chunk);
+  // });
+  // relay.client.get(ws).on("timeout", function (chunk) {
+  //   console.log("timeout!");
+  // });
+}
+
+async function pullerRun(ws) {
+  const PORT_GAP = Number(process.env.PORT_GAP);
+  relay.subscriber = new zmq.Pull();
+  relay.subscriber.connect(
+    `tcp://${
+      ws.publisher.ip === "192.168.88.234" ? "127.0.0.1" : ws.publisher.ip
+    }:${ws.publisher.port + PORT_GAP}`
+  );
+
+  console.log(
+    `puller connected to tcp://${
+      ws.publisher.ip === "192.168.88.234" ? "127.0.0.1" : ws.publisher.ip
+    }:${ws.publisher.port + PORT_GAP}`
+  );
+
+  console.log("여기 오나?");
+  for await (const [msg] of relay.subscriber) {
+    console.log("work: ", msg);
+    const decoded = decoder.decode(msg);
+    console.log("decoded", decoded);
     const lastIndex = decoded.lastIndexOf("}{");
-    // console.log("lastIndex", lastIndex);
     rest = decoded;
     let result = null;
     if (lastIndex > 0) {
@@ -308,18 +461,11 @@ async function clientRun(ws) {
       result = rest;
       rest = "";
     }
-    // console.log("last", last);
     try {
-      // console.log("received:", "[" + last.replace(/}{/g, "},{") + "]");
       const decodeList = JSON.parse("[" + result.replace(/}{/g, "},{") + "]");
       for (let i = 0; i < decodeList.length; i++) {
         const row = decodeList[i];
-        // console.log("row", row);
-        // const json = JSON.parse(row);
-        // console.log("json data", row);
-        // if (row.type !== "logout") {
 
-        // }
         dev.alias("relay에서 받음").log(row);
         if (row.type === "players") {
           console.log("net tcp player");
@@ -396,16 +542,9 @@ async function clientRun(ws) {
     } catch (e) {
       // console.log(e);
     }
-  });
-  relay.client.get(ws).on("error", function (chunk) {
-    console.log("error!");
-    console.log(chunk);
-  });
-  relay.client.get(ws).on("timeout", function (chunk) {
-    console.log("timeout!");
-  });
+  }
 }
 
-async function sendMessage(ws, message) {
-  relay.client.get(ws).write(message);
-}
+// async function sendMessage(ws, message) {
+//   relay.client.get(ws).write(message);
+// }

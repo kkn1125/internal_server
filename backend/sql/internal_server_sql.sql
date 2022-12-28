@@ -1,3 +1,27 @@
+show databases;
+use internal_server;
+select * from connection;
+select * from pool_sockets;
+select * from pool_publishers;
+select * from locations;
+show tables;
+UPDATE locations
+      SET pox=5, poy=5, poz=0, roy=1
+      WHERE
+        user_id = 1
+      AND
+        channel_id = 1
+      AND
+        space_id = 1;
+UPDATE locations 
+SET 
+    pox = 300,
+    poy = 100,
+    poz = 0,
+    roy = 1.5708
+WHERE
+    user_id = 1 AND channel_id = 1
+        AND space_id = 1;
 drop database if exists internal_server;
 -- MySQL Workbench Forward Engineering
 

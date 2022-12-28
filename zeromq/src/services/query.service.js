@@ -4,22 +4,19 @@ const Query = require("../models/Query.js");
 
 Query.updateLocation = async (req, res, next) => {
   try {
-    const { pox, poy, poz, roy, pk, channel, space } = req;
-    console.log(req);
-    const [result] = await sql.promise().query(
+    const { pox, poy, poz, roy, pk, channel, space } = req.body;
+    await sql.promise().query(
       `UPDATE locations
-      SET pox=?, poy=?, poz=?, roy=?
-      WHERE
-        user_id = ?
-      AND
-        channel_id = ?
-      AND
-        space_id = ?`,
+    SET pox=?, poy=?, poz=?, roy=?
+    WHERE
+      user_id = ?
+    AND
+      channel_id = ?
+    AND
+      space_id = ?`,
       [pox, poy, poz, roy, pk, channel, space]
     );
-    // console.log(result);
   } catch (e) {
-    console.log(e);
     // res.status(500).json({
     //   ok: false,
     // });
@@ -48,6 +45,22 @@ Query.players = async (req, res, next) => {
     ok: true,
     players: readPlayers,
   });
+};
+
+Query.autoConnectServers = async () => {
+  const [publishers] = await sql
+    .promise()
+    .query(`SELECT * FROM pool_publishers`);
+
+  const [connections] = await sql.promise().query(`SELECT 
+    pool_publishers.*, COUNT(*) AS publisher_count
+  FROM
+    connection
+      LEFT JOIN
+    pool_publishers ON pool_publishers.id = connection.publisher_id
+  GROUP BY publisher_id`);
+
+  return { publishers, connections };
 };
 
 const queryService = Query;

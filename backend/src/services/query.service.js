@@ -137,17 +137,17 @@ async function autoInsertUser(data, locale, dataMap) {
       const [sockets] = await sql
         .promise()
         .query(`SELECT port FROM pool_sockets`);
-      let portCompare = 0;
+      let portCompare = options.port.socket;
       for (let i = 0; i < sockets.length - 1; i++) {
         const prevSock = sockets[i];
         const nextSock = sockets[i];
         if (prevSock.port + 1 !== nextSock.port) {
-          portCompare = prevSock.port - options.port.socket + 1;
+          portCompare = prevSock.port + 1;
           break;
         }
       }
       if (portCompare === 0 && sockets.length !== 0) {
-        portCompare = sockets.slice(-1)[0].port - options.port.socket + 1;
+        portCompare = sockets.slice(-1)[0].port + 1;
       }
 
       await sql.promise().query(
@@ -156,7 +156,7 @@ async function autoInsertUser(data, locale, dataMap) {
       VALUES (?, ?, ?, ?, ?, ?)`,
         [
           options.ip.socket,
-          options.port.socket + portCompare,
+          portCompare,
           options.cpu_usage,
           options.memory_usage,
           true,
@@ -168,7 +168,7 @@ async function autoInsertUser(data, locale, dataMap) {
       dataMap.socket = Object.assign(dataMap.socket || {}, {
         pk: (isExistsSocket[isExistsSocket.length - 1]?.id || 0) + 1,
         ip: options.ip.socket,
-        port: options.port.socket + portCompare,
+        port: portCompare,
       });
     }
 
@@ -209,36 +209,31 @@ async function autoInsertUser(data, locale, dataMap) {
       const [publishers] = await sql
         .promise()
         .query(`SELECT port FROM pool_publishers`);
-      let portCompare = 0;
+      let portCompare = options.port.publisher;
       for (let i = 0; i < publishers.length - 1; i++) {
         const prevPub = publishers[i];
         const nextPub = publishers[i];
         if (prevPub.port + 1 !== nextPub.port) {
-          portCompare = prevPub.port - options.port.publisher + 1;
+          portCompare = prevPub.port + 1;
           break;
         }
       }
       if (portCompare === 0 && publishers.length !== 0) {
-        portCompare = publishers.slice(-1)[0].port - options.port.publisher + 1;
+        portCompare = publishers.slice(-1)[0].port + 1;
       }
       // const publisherPk = readPublisher[0].Auto_increment;
       await sql.promise().query(
         `INSERT INTO pool_publishers
         (ip, port, is_live, limit_amount)
         VALUES (?, ?, ?, ?)`,
-        [
-          options.ip.publisher,
-          options.port.publisher + portCompare,
-          true,
-          options.limit.pool_publishers,
-        ]
+        [options.ip.publisher, portCompare, true, options.limit.pool_publishers]
       );
       observers.publisher.target =
         (isExistsPublisher[isExistsPublisher.length - 1]?.id || 0) + 1;
       dataMap.publisher = Object.assign(dataMap.publisher || {}, {
         pk: (isExistsPublisher[isExistsPublisher.length - 1]?.id || 0) + 1,
         ip: options.ip.publisher,
-        port: options.port.publisher + portCompare,
+        port: portCompare,
       });
     }
     /* 풀 소켓, 퍼블리셔 존재 여부 조회 끝 */
