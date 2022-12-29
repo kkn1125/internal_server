@@ -30,8 +30,8 @@ const options = {
   },
   limit: {
     locales: 1000,
-    pool_sockets: 5,
-    pool_publishers: 5,
+    pool_sockets: 2,
+    pool_publishers: 2,
     spaces: 5,
     channels: 50,
     users: 50,
@@ -146,7 +146,7 @@ async function autoInsertUser(data, locale, dataMap) {
           break;
         }
       }
-      if (portCompare === 0 && sockets.length !== 0) {
+      if (portCompare === options.port.socket && sockets.length !== 0) {
         portCompare = sockets.slice(-1)[0].port + 1;
       }
 
@@ -218,7 +218,7 @@ async function autoInsertUser(data, locale, dataMap) {
           break;
         }
       }
-      if (portCompare === 0 && publishers.length !== 0) {
+      if (portCompare === options.port.publisher && publishers.length !== 0) {
         portCompare = publishers.slice(-1)[0].port + 1;
       }
       // const publisherPk = readPublisher[0].Auto_increment;

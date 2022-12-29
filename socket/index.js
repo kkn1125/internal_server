@@ -7,7 +7,7 @@ const pm2 = require("pm2");
 const Queue = require("./src/models/Queue");
 const queryService = require("./src/services/query.service");
 // const pm2 = require("pm2");
-const locationQueue = new Queue();
+// const locationQueue = new Queue();
 const zmq = require("zeromq");
 const { dev } = require("./src/utils/tools");
 const net = require("net");
@@ -42,12 +42,18 @@ const users = new Map();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const relay = {
-  client: null,
-  subscriber: null,
+  client: new zmq.Request(),
+  subscriber: new zmq.Pull(),
+  clients: new Set(),
+  subscribers: new Set(),
 };
+relay.client.sendHighWaterMark = 1000;
+relay.client.sendTimeout = 16;
+
 let now = null;
 
 let sockets = new Map();
+let socketsSet = new Set();
 
 const app = uWs
   .App({})
@@ -88,13 +94,14 @@ const app = uWs
       } catch (e) {}
     },
     open: (ws) => {
-      console.log(Object.assign({}, ws));
+      // console.log(Object.assign({}, ws));
       users.set(
         ws,
         Object.assign(users.get(ws) || {}, {
           uuid: ws.user.uuid,
         })
       );
+      socketsSet.add(ws);
       sockets.set(ws.user.pk, ws);
       ws.subscribe("broadcast");
       ws.subscribe(`${ws.space.pk}-${ws.channel.pk}`);
@@ -102,11 +109,11 @@ const app = uWs
       clientRun(ws);
       pullerRun(ws);
     },
-    message: (ws, message, isBinary) => {
+    message: async (ws, message, isBinary) => {
       /* Ok is false if backpressure was built up, wait for drain */
       if (isBinary) {
         const locationJson = Message.decode(new Uint8Array(message)).toJSON();
-        queryService.updateLocation({
+        await queryService.updateLocation({
           pk: ws.user.pk,
           space: ws.space.pk,
           channel: ws.channel.pk,
@@ -116,7 +123,7 @@ const app = uWs
           roy: locationJson.roy,
         });
         if (ws.getBufferedAmount() < backpressure) {
-          sendMessage(
+          await sendMessage(
             ws,
             JSON.stringify({
               type: "locations",
@@ -139,11 +146,11 @@ const app = uWs
               poz: json.poz,
               roy: json.roy,
             })
-            .then((result) => {
+            .then(async (result) => {
               const { data } = result;
               ws.send(JSON.stringify(data));
               if (ws.getBufferedAmount() < backpressure) {
-                sendMessage(
+                await sendMessage(
                   ws,
                   JSON.stringify({
                     type: "players",
@@ -173,16 +180,17 @@ const app = uWs
       //     pk: ws.user.pk,
       //   })
       // );
+      socketsSet.delete(ws);
       axios
         .post(`http://${apiHost}:${apiPort}/query/logout`, {
           pk: ws.user.pk,
         })
-        .then((result) => {
+        .then(async (result) => {
           const { data } = result;
           // console.log(data, "여기!");
           // if (ws.getBufferedAmount() < backpressure) {
           // console.log(data);
-          sendMessage(
+          await sendMessage(
             ws,
             JSON.stringify({
               type: "logout",
@@ -192,7 +200,7 @@ const app = uWs
           );
           // }
           relay.client.destroy();
-          // relay.client.get(ws).destroy();
+          // relay.client.destroy();
           // relay.client.delete(ws);
         })
         .catch((err) => {});
@@ -244,8 +252,8 @@ const app = uWs
 
 function publishData(data) {
   if (data.type === "players") {
-    console.log("packet", data.target);
-    console.log("packet", data.players);
+    // console.log("packet", data.target);
+    // console.log("packet", data.players);
     app.publish(data.target, JSON.stringify(data.players));
   } else if (data.type === "locations") {
     now = data.target;
@@ -288,16 +296,26 @@ async function sendMessage(ws, data) {
     console.log("Received ", result);
   } catch (e) {
     console.log("error!", e);
+    // relay.client = new zmq.Request();
+    for (let addr of relay.clients.keys()) {
+      relay.client.connect(addr);
+    }
   }
 }
 
 async function clientRun(ws) {
   //  Hello World client
-  relay.client = new zmq.Request();
-  relay.client.connect(`tcp://${ws.publisher.ip}:${ws.publisher.port}`);
-  console.log(
-    `client connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
-  );
+  if (!relay.clients.has(`${ws.publisher.ip}:${ws.publisher.port}`)) {
+    relay.clients.add(`${ws.publisher.ip}:${ws.publisher.port}`);
+    relay.client.connect(`tcp://${ws.publisher.ip}:${ws.publisher.port}`);
+    console.log(
+      `client connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
+    );
+  } else {
+    console.log(
+      `client already connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
+    );
+  }
 
   // await sendMessage(
   //   JSON.stringify({
@@ -315,10 +333,10 @@ async function clientRun(ws) {
   // //   host: puller.ip,
   // //   port: puller.port,
   // // });
-  // relay.client.get(ws).on("connect", function () {
+  // relay.client.on("connect", function () {
   //   console.log("connected to server!");
   // });
-  // relay.client.get(ws).on("data", function (chunk) {
+  // relay.client.on("data", function (chunk) {
   //   const decoded = decoder.decode(chunk);
   //   // console.log("decoded", decoded);
   //   console.log("data", chunk);
@@ -422,33 +440,45 @@ async function clientRun(ws) {
   //     // console.log(e);
   //   }
   // });
-  // relay.client.get(ws).on("error", function (chunk) {
+  // relay.client.on("error", function (chunk) {
   //   console.log("error!");
   //   console.log(chunk);
   // });
-  // relay.client.get(ws).on("timeout", function (chunk) {
+  // relay.client.on("timeout", function (chunk) {
   //   console.log("timeout!");
   // });
 }
 
 async function pullerRun(ws) {
   const PORT_GAP = Number(process.env.PORT_GAP);
-  relay.subscriber = new zmq.Pull();
-  relay.subscriber.connect(
-    `tcp://${
-      ws.publisher.ip === "192.168.88.234" ? "127.0.0.1" : ws.publisher.ip
-    }:${ws.publisher.port + PORT_GAP}`
-  );
-
-  console.log(
-    `puller connected to tcp://${
-      ws.publisher.ip === "192.168.88.234" ? "127.0.0.1" : ws.publisher.ip
-    }:${ws.publisher.port + PORT_GAP}`
-  );
-
-  console.log("여기 오나?");
+  if (
+    !relay.subscribers.has(
+      `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
+    )
+  ) {
+    relay.subscribers.add(
+      `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
+    );
+    relay.subscriber.connect(
+      `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
+    );
+    console.log(
+      `puller connected to tcp://${ws.publisher.ip}:${
+        ws.publisher.port + PORT_GAP
+      }`
+    );
+  } else {
+    console.log(
+      `puller already connected to tcp://${ws.publisher.ip}:${
+        ws.publisher.port + PORT_GAP
+      }`
+    );
+  }
+  // console.log("여기 오나?");
+}
+async function listeningSubscriber() {
   for await (const [msg] of relay.subscriber) {
-    console.log("work: ", msg);
+    // console.log("work: ", msg);
     const decoded = decoder.decode(msg);
     console.log("decoded", decoded);
     const lastIndex = decoded.lastIndexOf("}{");
@@ -463,16 +493,21 @@ async function pullerRun(ws) {
     }
     try {
       const decodeList = JSON.parse("[" + result.replace(/}{/g, "},{") + "]");
+
       for (let i = 0; i < decodeList.length; i++) {
         const row = decodeList[i];
 
-        dev.alias("relay에서 받음").log(row);
+        // dev.alias("relay에서 받음").log(row);
         if (row.type === "players") {
           console.log("net tcp player");
-          console.log(row.target);
+          // console.log(row.target);
           try {
-            if (!ws.isSubscribed(row.target)) {
-              ws.subscribe(row.target);
+            for (let ws of socketsSet.keys()) {
+              if (row.target !== `${ws.space.pk}-${ws.channel.pk}`) {
+                if (!ws.isSubscribed(row.target)) {
+                  ws.subscribe(row.target);
+                }
+              }
             }
           } catch (e) {
             // console.log(e);
@@ -495,11 +530,15 @@ async function pullerRun(ws) {
           });
         } else if (row.type === "locations") {
           try {
-            if (!ws.isSubscribed(row.target)) {
-              ws.subscribe(row.target);
+            for (let ws of socketsSet.keys()) {
+              if (row.target !== `${ws.space.pk}-${ws.channel.pk}`) {
+                if (!ws.isSubscribed(row.target)) {
+                  ws.subscribe(row.target);
+                }
+              }
             }
           } catch (e) {
-            console.log(e);
+            // console.log(e);
           }
           // TODO: pm2 사용할 때만 활성화
           // process.send({
@@ -540,11 +579,12 @@ async function pullerRun(ws) {
         }
       }
     } catch (e) {
-      // console.log(e);
+      console.log(e);
     }
   }
 }
+listeningSubscriber();
 
 // async function sendMessage(ws, message) {
-//   relay.client.get(ws).write(message);
+//   relay.client.write(message);
 // }

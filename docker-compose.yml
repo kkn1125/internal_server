@@ -78,12 +78,13 @@ services:
     container_name: publisher
     build:
       context: .
-      dockerfile: ./zeromq/Dockerfile
+      dockerfile: ./relay/Dockerfile
     ports:
       - 20000:20000
+      - 40000:40000
     working_dir: /home/
     volumes:
-      - ./zeromq/:/home
+      - ./relay/:/home
       # - /home/node_modules/
     environment:
       HOST: 0.0.0.0
@@ -96,6 +97,7 @@ services:
       MARIADB_PW: 1234
       MARIADB_DATABASE: internal_server
       PORT_GAP: 20000
+      IP_ADDRESS: 192.168.88.234
 
   # back2:
   #   image: node:lts
@@ -137,10 +139,10 @@ services:
   #     # - /home/node_modules/
   #   environment:
   #     HOST: 0.0.0.0
-  #     NODE_ENV: production
   #     PORT: 5002
+  #     NODE_ENV: production
   #     VITE_API_HOST: 192.168.88.234
-  #     VITE_API_PORT: 3001
+  #     VITE_API_PORT: 3002
 
   # socket2:
   #   image: node:lts
@@ -165,7 +167,7 @@ services:
   #     MARIADB_PW: 1234
   #     MARIADB_DATABASE: internal_server
   #     API_HOST: 192.168.88.234
-  #     API_PORT: 3001
+  #     API_PORT: 3002
   #     PORT_GAP: 20000
 
   # publisher2:
@@ -177,11 +179,13 @@ services:
   #     dockerfile: ./zeromq/Dockerfile
   #   ports:
   #     - 20001:20001
+  #     - 40001:40001
   #   working_dir: /home/
   #   volumes:
   #     - ./zeromq/:/home
   #     # - /home/node_modules/
   #   environment:
+  #     HOST: 0.0.0.0
   #     SERVER_HOST: 0.0.0.0
   #     SERVER_PORT: 20001
   #     NODE_ENV: production
@@ -191,3 +195,4 @@ services:
   #     MARIADB_PW: 1234
   #     MARIADB_DATABASE: internal_server
   #     PORT_GAP: 20000
+  #     IP_ADDRESS: 192.168.88.234

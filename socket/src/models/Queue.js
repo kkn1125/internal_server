@@ -27,4 +27,20 @@ class Queue {
   }
 }
 
+class LocationQueue {
+  #storage = [];
+  constructor() {}
+  add(data) {
+    this.#storage.push(data);
+  }
+  get() {
+    return this.#storage.shift();
+  }
+  size() {
+    return this.#storage.length;
+  }
+}
+
 module.exports = Queue;
+
+module.exports = { LocationQueue };
