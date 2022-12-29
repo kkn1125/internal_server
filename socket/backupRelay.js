@@ -47,6 +47,7 @@ const relay = {
   clients: new Set(),
   subscribers: new Set(),
 };
+
 // relay.client.sendHighWaterMark = 1000;
 // relay.client.sendTimeout = 16;
 
@@ -199,7 +200,7 @@ const app = uWs
             })
           );
           // }
-          relay.client.get(ws).destroy();
+          relay.client.destroy();
           // relay.client.destroy();
           // relay.client.delete(ws);
         })
@@ -291,200 +292,127 @@ let rest = "";
 
 async function sendMessage(ws, data) {
   try {
-    await relay.client.get(ws).send(data);
-    const [result] = await relay.client.get(ws).receive();
-    console.log("Received ", result);
+    await relay.client.get(ws).write(data);
+    // const [result] = await relay.client.receive();
+    // console.log("Received ", result);
   } catch (e) {
     console.log("error!", e);
-    relay.client.set(ws, new zmq.Request());
+    // relay.client = new zmq.Request();
+    // for (let addr of relay.clients.keys()) {
+    //   relay.client.connect(addr);
+    // }
   }
 }
 
 async function clientRun(ws) {
-  //  Hello World client
-  // if (!relay.clients.has(`${ws.publisher.ip}:${ws.publisher.port}`)) {
-    relay.client.set(ws, new zmq.Request());
-    relay.client.get(ws).sendHighWaterMark = 1000;
-    relay.client.get(ws).sendTimeout = 16;
-    relay.clients.add(`${ws.publisher.ip}:${ws.publisher.port}`);
-    relay.client
-      .get(ws)
-      .connect(`tcp://${ws.publisher.ip}:${ws.publisher.port}`);
-    console.log(
-      `client connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
-    );
-  // } else {
-  //   console.log(
-  //     `client already connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
-  //   );
-  // }
-
-  // await sendMessage(
-  //   JSON.stringify({
-  //     test: 1,
-  //   })
-  // );
-  // relay.client.set(
-  //   ws,
-  //   net.connect({
-  //     host: ws.publisher.ip,
-  //     port: ws.publisher.port,
-  //   })
-  // );
-  // // relay.client = net.connect({
-  // //   host: puller.ip,
-  // //   port: puller.port,
-  // // });
-  // relay.client.on("connect", function () {
-  //   console.log("connected to server!");
-  // });
-  // relay.client.on("data", function (chunk) {
-  //   const decoded = decoder.decode(chunk);
-  //   // console.log("decoded", decoded);
-  //   console.log("data", chunk);
-  //   const lastIndex = decoded.lastIndexOf("}{");
-  //   // console.log("lastIndex", lastIndex);
-  //   rest = decoded;
-  //   let result = null;
-  //   if (lastIndex > 0) {
-  //     result = rest.slice(0, lastIndex + 1);
-  //     rest = rest.slice(lastIndex + 1);
-  //   } else {
-  //     result = rest;
-  //     rest = "";
-  //   }
-  //   // console.log("last", last);
-  //   try {
-  //     // console.log("received:", "[" + last.replace(/}{/g, "},{") + "]");
-  //     const decodeList = JSON.parse("[" + result.replace(/}{/g, "},{") + "]");
-  //     for (let i = 0; i < decodeList.length; i++) {
-  //       const row = decodeList[i];
-  //       // console.log("row", row);
-  //       // const json = JSON.parse(row);
-  //       // console.log("json data", row);
-  //       // if (row.type !== "logout") {
-
-  //       // }
-  //       dev.alias("relay에서 받음").log(row);
-  //       if (row.type === "players") {
-  //         console.log("net tcp player");
-  //         console.log(row.target);
-  //         try {
-  //           if (!ws.isSubscribed(row.target)) {
-  //             ws.subscribe(row.target);
-  //           }
-  //         } catch (e) {
-  //           // console.log(e);
-  //         }
-  //         // TODO: pm2 사용할 때만 활성화
-  //         // process.send({
-  //         //   type: "process:msg",
-  //         //   data: {
-  //         //     success: true,
-  //         //     type: row.type,
-  //         //     target: row.target,
-  //         //     players: row.players,
-  //         //   },
-  //         // });
-  //         publishData({
-  //           success: true,
-  //           type: row.type,
-  //           target: row.target,
-  //           players: row.players,
-  //         });
-  //       } else if (row.type === "locations") {
-  //         try {
-  //           if (!ws.isSubscribed(row.target)) {
-  //             ws.subscribe(row.target);
-  //           }
-  //         } catch (e) {
-  //           console.log(e);
-  //         }
-  //         // TODO: pm2 사용할 때만 활성화
-  //         // process.send({
-  //         //   type: "process:msg",
-  //         //   data: {
-  //         //     success: true,
-  //         //     type: row.type,
-  //         //     target: row.target,
-  //         //     pk: row.locationJson.id,
-  //         //     locationJson: row.locationJson,
-  //         //   },
-  //         // });
-  //         publishData({
-  //           success: true,
-  //           type: row.type,
-  //           target: row.target,
-  //           pk: row.locationJson.id,
-  //           locationJson: row.locationJson,
-  //         });
-  //       } else if (row.type === "logout") {
-  //         // dev.log("여긴 와라 좀");
-  //         // TODO: pm2 사용할 때만 활성화
-  //         // process.send({
-  //         //   type: "process:msg",
-  //         //   data: {
-  //         //     success: true,
-  //         //     type: row.type,
-  //         //     target: row.target,
-  //         //     players: row.players,
-  //         //   },
-  //         // });
-  //         publishData({
-  //           success: true,
-  //           type: row.type,
-  //           target: row.target,
-  //           players: row.players,
-  //         });
-  //       }
-  //     }
-  //   } catch (e) {
-  //     // console.log(e);
-  //   }
-  // });
-  // relay.client.on("error", function (chunk) {
-  //   console.log("error!");
-  //   console.log(chunk);
-  // });
-  // relay.client.on("timeout", function (chunk) {
-  //   console.log("timeout!");
-  // });
+  relay.client.set(
+    ws,
+    net.connect({
+      host: ws.publisher.ip,
+      port: ws.publisher.port,
+    })
+  );
+  relay.client.get(ws).on("connect", function () {
+    console.log("connected to server!");
+  });
+  relay.client.get(ws).on("data", function (chunk) {
+    // console.log(chunk);
+  });
+  relay.client.get(ws).on("error", function (chunk) {
+    console.log("error!");
+    console.log(chunk);
+  });
+  relay.client.get(ws).on("timeout", function (chunk) {
+    console.log("timeout!");
+  });
 }
 
 async function pullerRun(ws) {
-  const PORT_GAP = Number(process.env.PORT_GAP);
-  // if (
-  //   !relay.subscribers.has(
-  //     `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
-  //   )
-  // ) {
-    relay.subscriber.set(ws, new zmq.Pull());
-    relay.subscribers.add(
-      `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
-    );
-    relay.subscriber
-      .get(ws)
-      .connect(`tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`);
-    console.log(
-      `puller connected to tcp://${ws.publisher.ip}:${
-        ws.publisher.port + PORT_GAP
-      }`
-    );
-    listeningSubscriber(ws);
-  // } else {
-  //   console.log(
-  //     `puller already connected to tcp://${ws.publisher.ip}:${
-  //       ws.publisher.port + PORT_GAP
-  //     }`
-  //   );
-  // }
-  // console.log("여기 오나?");
+  relay.subscriber.set(
+    ws,
+    net.connect({
+      host: ws.publisher.ip,
+      port: ws.publisher.port,
+    })
+  );
+  relay.subscriber.get(ws).on("connect", function () {
+    console.log("connected to server!");
+  });
+  relay.subscriber.get(ws).on("data", function (chunk) {
+    const decoded = decoder.decode(chunk);
+    // console.log("data", chunk);
+    const lastIndex = decoded.lastIndexOf("}{");
+    rest = decoded;
+    let result = null;
+    if (lastIndex > 0) {
+      result = rest.slice(0, lastIndex + 1);
+      rest = rest.slice(lastIndex + 1);
+    } else {
+      result = rest;
+      rest = "";
+    }
+    try {
+      const decodeList = JSON.parse("[" + result.replace(/}{/g, "},{") + "]");
+      for (let i = 0; i < decodeList.length; i++) {
+        const row = decodeList[i];
+        // dev.alias("relay에서 받음").log(row);
+        if (row.type === "players") {
+          console.log("net tcp player");
+          // console.log(row.target);
+          try {
+            if (!ws.isSubscribed(row.target)) {
+              ws.subscribe(row.target);
+            }
+          } catch (e) {
+            // console.log(e);
+          }
+          publishData({
+            success: true,
+            type: row.type,
+            target: row.target,
+            players: row.players,
+          });
+        } else if (row.type === "locations") {
+          try {
+            if (!ws.isSubscribed(row.target)) {
+              ws.subscribe(row.target);
+            }
+          } catch (e) {
+            console.log(e);
+          }
+          publishData({
+            success: true,
+            type: row.type,
+            target: row.target,
+            pk: row.locationJson.id,
+            locationJson: row.locationJson,
+          });
+        } else if (row.type === "logout") {
+          publishData({
+            success: true,
+            type: row.type,
+            target: row.target,
+            players: row.players,
+          });
+        }
+      }
+    } catch (e) {
+      // console.log(e);
+    }
+  });
+  relay.subscriber.get(ws).on("error", function (chunk) {
+    console.log("error!");
+    console.log(chunk);
+  });
+  relay.subscriber.get(ws).on("timeout", function (chunk) {
+    console.log("timeout!");
+  });
 }
-async function listeningSubscriber(sock) {
-  for await (const [msg] of relay.subscriber.get(sock)) {
+async function listeningSubscriber() {
+  for await (const [msg] of relay.subscriber) {
     // console.log("work: ", msg);
     const decoded = decoder.decode(msg);
-    console.log("decoded", decoded);
+    // console.log("decoded", decoded);
     const lastIndex = decoded.lastIndexOf("}{");
     rest = decoded;
     let result = null;
