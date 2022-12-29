@@ -140,7 +140,7 @@ function attaching(number) {
     const uuid = v4();
     // setTimeout(() => {
     axios
-      .post(`http://192.168.254.16:3000/query/attach`, {
+      .post(`http://192.168.88.234:3001/query/attach`, {
         uuid: uuid,
         email: "",
         locale: "ko-kr",

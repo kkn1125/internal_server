@@ -31,7 +31,7 @@ const connectedServer = new Map();
 const relay = {
   server: null,
   pusher: null,
-  puller: null,
+  puller: new Map(),
 };
 
 const decoder = new TextDecoder();
@@ -51,7 +51,7 @@ function createServer() {
       console.log(socket.address().address + "connected");
     });
     socket.on("data", (data) => {
-      console.log("data", data);
+      // console.log("data", data);
       temp = data;
       const flag = decoder.decode(data.slice(0, 6));
       console.log("flag", flag);
@@ -79,7 +79,7 @@ function createServer() {
             );
             merge.set(serverFlag);
             merge.set(data, serverFlag.byteLength);
-            console.log("broadcast to relay");
+            // console.log("broadcast to relay");
             for (let i = 0; i < tcpSockets.length; i++) {
               const tcp = tcpSockets[i];
               tcp.write(data);
@@ -87,7 +87,7 @@ function createServer() {
             for (let cli of relay.puller.values()) {
               cli.write(merge);
             }
-            console.log("Received from other relay server: ", result);
+            // console.log("Received from other relay server: ", result);
           }
         } catch (e) {
           console.log("from server cli", e);
@@ -95,10 +95,10 @@ function createServer() {
       }
     });
     socket.on("drain", function (a, b, c) {
-      console.log(a, b, c);
-      console.log("drain data", temp);
+      // console.log(a, b, c);
+      // console.log("drain data", temp);
       const flag = decoder.decode(temp.slice(0, 6));
-      console.log("flag", flag);
+      console.log("drain flag", flag);
 
       if (flag === "server") {
         try {
@@ -123,7 +123,7 @@ function createServer() {
             );
             merge.set(serverFlag);
             merge.set(temp, serverFlag.byteLength);
-            console.log("broadcast to relay");
+            // console.log("broadcast to relay");
             for (let i = 0; i < tcpSockets.length; i++) {
               const tcp = tcpSockets[i];
               tcp.write(temp);
@@ -167,16 +167,18 @@ function createPusher() {
         serverSocket.write(data.slice(6));
       } else {
         serverSocket.write(data);
+        relay.puller.write(data);
       }
     });
     socket.on("drain", function (a, b, c) {
-      console.log(a, b, c);
-      console.log("drain data", temp);
+      // console.log(a, b, c);
+      // console.log("drain data", temp);
       const flag = decoder.decode(temp.slice(0, 6));
       if (flag === "server") {
         serverSocket.write(temp.slice(6));
       } else {
         serverSocket.write(temp);
+        relay.puller.write(temp);
       }
     });
     socket.on("error", (err) => {
