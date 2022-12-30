@@ -111,7 +111,11 @@ function connectSocket(connectionData) {
     allocation,
     user,
   } = connectionData;
-  const q = encodeURI(JSON.stringify(connectionData).trim());
+  const q = encodeURI(
+    JSON.stringify({
+      uuid: connectionData.user.uuid,
+    }).trim()
+  );
   const ws = new WebSocket(`ws://${socket.ip}:${socket.port}/?q=${q}`);
   ws.binaryType = "arraybuffer";
   ws.onopen = (e) => {
@@ -119,8 +123,6 @@ function connectSocket(connectionData) {
   };
   ws.onmessage = (message) => {
     const { data } = message;
-    // dev.alias("Socket Message").log(message);
-    // console.log(data);
     if (data instanceof ArrayBuffer) {
       for (let i = 0; i < Math.round(data.byteLength / packetLength); i++) {
         try {
@@ -154,16 +156,6 @@ function connectSocket(connectionData) {
         for (let u of json.players) {
           users.set(u.id, u);
         }
-        // for (let u of users.values()) {
-        //   const user = json.players.shift();
-        //   users.delete(u.id);
-        // }
-        // for (let u of json.players) {
-        // if (users.has(json.pk)) {
-        //   users.delete(json.pk);
-        // }
-        // users.set(u.id, Object.assign(users.get(u.id) || {}, u));
-        // }
       }
     }
   };
@@ -177,31 +169,6 @@ function connectSocket(connectionData) {
   };
   ws.onclose = (e) => {
     dev.alias("Socket").log("close");
-    // axios
-    //   .post(`http://${host}:${port}/query/enter`, attachUserData)
-    //   .then((result) => {
-    //     const { data } = result;
-    //     console.log(data);
-    //     sockets.set(
-    //       data.user.uuid,
-    //       connectSocket(
-    //         data.socket.ip,
-    //         data.socket.port,
-    //         attachUserData.user.uuid,
-    //         data.space.pk,
-    //         data.channel.pk,
-    //         data.user.pk
-    //       )
-    //     );
-    //     attachUserData.user.pk = data.user.pk;
-    //     const newMap = new Map();
-    //     for (let u of data.players) {
-    //       newMap.set(u.id, u);
-    //     }
-    //     users = newMap;
-    //     // users = data.players;
-    //     document.body.insertAdjacentHTML("afterbegin", loginEl);
-    //   });
   };
   return ws;
 }
@@ -335,76 +302,3 @@ window.addEventListener("click", (e) => {
   }
 });
 /* Panel Settings */
-
-/* SSE Settings */
-// const sse = new EventSource(`/sse`, {
-//   withCredentials: true,
-// });
-
-// sse.onopen = (e) => {
-//   console.log(e);
-// };
-
-// sse.onmessage = (message) => {
-//   const { data } = message;
-//   const json = JSON.parse(data);
-//   const { locales, sockets, publishers, spaces, channels, users } = json;
-//   const replaces = {};
-//   replaces.localeText = `<div>
-//     <b>Locales</b>
-//     <span>${locales[0].length}개</span>
-//     <ul>
-//       ${locales[0].map((locale) => `<li>${locale.region}</li>`).join("")}
-//     </ul>
-//   </div>`;
-//   replaces.socketText = `<div>
-//     <b>Sockets</b>
-//     <span>${sockets[0].length}개</span>
-//     <ul>
-//       ${sockets[0].map((socket) => `<li>${socket.port}</li>`).join("")}
-//     </ul>
-//   </div>`;
-//   replaces.publisherText = `<div>
-//     <b>Publishers</b>
-//     <span>${publishers[0].length}개</span>
-//     <ul>
-//       ${publishers[0].map((publisher) => `<li>${publisher.port}</li>`).join("")}
-//     </ul>
-//   </div>`;
-//   replaces.spaceText = `<div>
-//     <b>Spaces</b>
-//     <span>${spaces[0].length}개</span>
-//     <ul>
-//       ${spaces[0].map((space) => `<li>${space.name}</li>`).join("")}
-//     </ul>
-//   </div>`;
-//   replaces.channelText = `<div>
-//     <b>Channels</b>
-//     <span>${channels[0].length}개</span>
-//     <ul>
-//       ${channels[0].map((channel) => `<li>${channel.name}</li>`).join("")}
-//     </ul>
-//   </div>`;
-//   replaces.userText = `<div>
-//     <b>Users</b>
-//     <span>${users[0].length}개</span>
-//     <ul>
-//       ${users[0].map((user) => `<li>${user.uuid}</li>`).join("")}
-//     </ul>
-//   </div>`;
-
-//   const tabs = `
-//   <button id="locale">locale</button>
-//   <button id="socket">socket</button>
-//   <button id="publisher">publisher</button>
-//   <button id="space">space</button>
-//   <button id="channel">channel</button>
-//   <button id="user">user</button>
-//   `;
-//   panel.innerHTML = tabs + replaces[indexKey];
-// };
-
-// sse.onerror = (err) => {
-//   console.log(err);
-// };
-/* SSE Settings */

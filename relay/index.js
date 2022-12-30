@@ -5,8 +5,6 @@ const net = require("net");
 const queryService = require("./src/services/query.service");
 const { dev } = require("./src/utils/tools");
 const { exec } = require("child_process");
-// const queryService = require("../socket/src/services/query.service");
-// const __dirname = path.resolve();
 
 const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;
@@ -39,27 +37,27 @@ const decoder = new TextDecoder();
 let temp = null;
 let serverSocket = null;
 
-let tcpSockets = [];
+let pushSockets = [];
 let clientSockets = [];
 
 function createServer() {
   relay.server = new net.Server((socket) => {
     let temp;
     socket.setMaxListeners(5000);
-    tcpSockets.push(socket);
+    // pushSockets.push(socket);
     socket.on("connect", () => {
       console.log(socket.address().address + "connected");
     });
     socket.on("data", (data) => {
-      // console.log("data", data);
+      console.log("data", data);
       temp = data;
       const flag = decoder.decode(data.slice(0, 6));
       console.log("flag", flag);
 
       if (flag === "server") {
         try {
-          for (let i = 0; i < tcpSockets.length; i++) {
-            const tcp = tcpSockets[i];
+          for (let i = 0; i < pushSockets.length; i++) {
+            const tcp = pushSockets[i];
             tcp.write(data.slice(6));
           }
         } catch (e) {
@@ -67,8 +65,8 @@ function createServer() {
         }
       } else {
         try {
-          for (let i = 0; i < tcpSockets.length; i++) {
-            const tcp = tcpSockets[i];
+          for (let i = 0; i < pushSockets.length; i++) {
+            const tcp = pushSockets[i];
             tcp.write(data);
           }
 
@@ -80,8 +78,8 @@ function createServer() {
             merge.set(serverFlag);
             merge.set(data, serverFlag.byteLength);
             // console.log("broadcast to relay");
-            for (let i = 0; i < tcpSockets.length; i++) {
-              const tcp = tcpSockets[i];
+            for (let i = 0; i < pushSockets.length; i++) {
+              const tcp = pushSockets[i];
               tcp.write(data);
             }
             for (let cli of relay.puller.values()) {
@@ -102,8 +100,8 @@ function createServer() {
 
       if (flag === "server") {
         try {
-          for (let i = 0; i < tcpSockets.length; i++) {
-            const tcp = tcpSockets[i];
+          for (let i = 0; i < pushSockets.length; i++) {
+            const tcp = pushSockets[i];
             tcp.write(temp.slice(6));
           }
         } catch (e) {
@@ -111,8 +109,8 @@ function createServer() {
         }
       } else {
         try {
-          for (let i = 0; i < tcpSockets.length; i++) {
-            const tcp = tcpSockets[i];
+          for (let i = 0; i < pushSockets.length; i++) {
+            const tcp = pushSockets[i];
             tcp.write(temp);
           }
 
@@ -124,8 +122,8 @@ function createServer() {
             merge.set(serverFlag);
             merge.set(temp, serverFlag.byteLength);
             // console.log("broadcast to relay");
-            for (let i = 0; i < tcpSockets.length; i++) {
-              const tcp = tcpSockets[i];
+            for (let i = 0; i < pushSockets.length; i++) {
+              const tcp = pushSockets[i];
               tcp.write(temp);
             }
             for (let cli of relay.puller.values()) {
@@ -154,21 +152,21 @@ function createPusher() {
   let temp;
   relay.pusher = new net.Server((socket) => {
     socket.setMaxListeners(5000);
-    tcpSockets.push(socket);
+    pushSockets.push(socket);
     socket.on("connect", () => {
       console.log(socket.address().address + "connected");
     });
     socket.on("data", (data) => {
-      console.log("data", data);
-      temp = data;
-      const flag = decoder.decode(data.slice(0, 6));
-      console.log("flag", flag);
-      if (flag === "server") {
-        serverSocket.write(data.slice(6));
-      } else {
-        serverSocket.write(data);
-        relay.puller.write(data);
-      }
+      console.log("pusher data", data);
+      // temp = data;
+      // const flag = decoder.decode(data.slice(0, 6));
+      // console.log("flag", flag);
+      // if (flag === "server") {
+      //   serverSocket.write(data.slice(6));
+      // } else {
+      //   serverSocket.write(data);
+      //   relay.puller.write(data);
+      // }
     });
     socket.on("drain", function (a, b, c) {
       // console.log(a, b, c);

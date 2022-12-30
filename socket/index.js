@@ -218,38 +218,6 @@ const app = uWs
     }
   });
 
-// TODO: pm2 사용할 때만 활성화
-// pm2.launchBus((err, bus) => {
-//   if (err) return;
-//   bus.on("process:msg", function (packet) {
-//     if (packet.hasOwnProperty("raw")) {
-//     } else {
-//       const { data } = packet;
-//       if (data.type === "players") {
-//         console.log("packet", data.target);
-//         console.log("packet", data.players);
-//         app.publish(data.target, JSON.stringify(data.players));
-//       } else if (data.type === "locations") {
-//         now = data.target;
-//         const encoded = Message.encode(
-//           new Message({
-//             id: data.pk,
-//             pox: data.locationJson.pox,
-//             poy: data.locationJson.poy,
-//             poz: data.locationJson.poz,
-//             roy: data.locationJson.roy,
-//           })
-//         ).finish();
-//         app.publish(data.target, encoded, true, true);
-//       } else if (data.type === "logout") {
-//         // console.log("여긴오냐");
-//         now = data.target;
-//         app.publish(data.target, JSON.stringify(data));
-//       }
-//     }
-//   });
-// });
-
 function publishData(data) {
   if (data.type === "players") {
     // console.log("packet", data.target);
@@ -274,14 +242,6 @@ function publishData(data) {
   }
 }
 
-// setInterval(() => {
-//   // if (ws.getBufferedAmount() < backpressure) {
-//   if (locationQueue.count > 0 && now) {
-//     app.publish(now, locationQueue.get(), true, true);
-//   }
-//   // }
-// }, 16);
-
 process.on("SIGINT", function () {
   process.exit(0);
 });
@@ -301,188 +261,35 @@ async function sendMessage(ws, data) {
 }
 
 async function clientRun(ws) {
-  //  Hello World client
-  // if (!relay.clients.has(`${ws.publisher.ip}:${ws.publisher.port}`)) {
-    relay.client.set(ws, new zmq.Request());
-    relay.client.get(ws).sendHighWaterMark = 1000;
-    relay.client.get(ws).sendTimeout = 16;
-    relay.clients.add(`${ws.publisher.ip}:${ws.publisher.port}`);
-    relay.client
-      .get(ws)
-      .connect(`tcp://${ws.publisher.ip}:${ws.publisher.port}`);
-    console.log(
-      `client connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
-    );
-  // } else {
-  //   console.log(
-  //     `client already connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
-  //   );
-  // }
-
-  // await sendMessage(
-  //   JSON.stringify({
-  //     test: 1,
-  //   })
-  // );
-  // relay.client.set(
-  //   ws,
-  //   net.connect({
-  //     host: ws.publisher.ip,
-  //     port: ws.publisher.port,
-  //   })
-  // );
-  // // relay.client = net.connect({
-  // //   host: puller.ip,
-  // //   port: puller.port,
-  // // });
-  // relay.client.on("connect", function () {
-  //   console.log("connected to server!");
-  // });
-  // relay.client.on("data", function (chunk) {
-  //   const decoded = decoder.decode(chunk);
-  //   // console.log("decoded", decoded);
-  //   console.log("data", chunk);
-  //   const lastIndex = decoded.lastIndexOf("}{");
-  //   // console.log("lastIndex", lastIndex);
-  //   rest = decoded;
-  //   let result = null;
-  //   if (lastIndex > 0) {
-  //     result = rest.slice(0, lastIndex + 1);
-  //     rest = rest.slice(lastIndex + 1);
-  //   } else {
-  //     result = rest;
-  //     rest = "";
-  //   }
-  //   // console.log("last", last);
-  //   try {
-  //     // console.log("received:", "[" + last.replace(/}{/g, "},{") + "]");
-  //     const decodeList = JSON.parse("[" + result.replace(/}{/g, "},{") + "]");
-  //     for (let i = 0; i < decodeList.length; i++) {
-  //       const row = decodeList[i];
-  //       // console.log("row", row);
-  //       // const json = JSON.parse(row);
-  //       // console.log("json data", row);
-  //       // if (row.type !== "logout") {
-
-  //       // }
-  //       dev.alias("relay에서 받음").log(row);
-  //       if (row.type === "players") {
-  //         console.log("net tcp player");
-  //         console.log(row.target);
-  //         try {
-  //           if (!ws.isSubscribed(row.target)) {
-  //             ws.subscribe(row.target);
-  //           }
-  //         } catch (e) {
-  //           // console.log(e);
-  //         }
-  //         // TODO: pm2 사용할 때만 활성화
-  //         // process.send({
-  //         //   type: "process:msg",
-  //         //   data: {
-  //         //     success: true,
-  //         //     type: row.type,
-  //         //     target: row.target,
-  //         //     players: row.players,
-  //         //   },
-  //         // });
-  //         publishData({
-  //           success: true,
-  //           type: row.type,
-  //           target: row.target,
-  //           players: row.players,
-  //         });
-  //       } else if (row.type === "locations") {
-  //         try {
-  //           if (!ws.isSubscribed(row.target)) {
-  //             ws.subscribe(row.target);
-  //           }
-  //         } catch (e) {
-  //           console.log(e);
-  //         }
-  //         // TODO: pm2 사용할 때만 활성화
-  //         // process.send({
-  //         //   type: "process:msg",
-  //         //   data: {
-  //         //     success: true,
-  //         //     type: row.type,
-  //         //     target: row.target,
-  //         //     pk: row.locationJson.id,
-  //         //     locationJson: row.locationJson,
-  //         //   },
-  //         // });
-  //         publishData({
-  //           success: true,
-  //           type: row.type,
-  //           target: row.target,
-  //           pk: row.locationJson.id,
-  //           locationJson: row.locationJson,
-  //         });
-  //       } else if (row.type === "logout") {
-  //         // dev.log("여긴 와라 좀");
-  //         // TODO: pm2 사용할 때만 활성화
-  //         // process.send({
-  //         //   type: "process:msg",
-  //         //   data: {
-  //         //     success: true,
-  //         //     type: row.type,
-  //         //     target: row.target,
-  //         //     players: row.players,
-  //         //   },
-  //         // });
-  //         publishData({
-  //           success: true,
-  //           type: row.type,
-  //           target: row.target,
-  //           players: row.players,
-  //         });
-  //       }
-  //     }
-  //   } catch (e) {
-  //     // console.log(e);
-  //   }
-  // });
-  // relay.client.on("error", function (chunk) {
-  //   console.log("error!");
-  //   console.log(chunk);
-  // });
-  // relay.client.on("timeout", function (chunk) {
-  //   console.log("timeout!");
-  // });
+  relay.client.set(ws, new zmq.Request());
+  relay.client.get(ws).sendHighWaterMark = 1000;
+  relay.client.get(ws).sendTimeout = 16;
+  relay.clients.add(`${ws.publisher.ip}:${ws.publisher.port}`);
+  relay.client.get(ws).connect(`tcp://${ws.publisher.ip}:${ws.publisher.port}`);
+  console.log(
+    `client connected to tcp://${ws.publisher.ip}:${ws.publisher.port}`
+  );
 }
 
 async function pullerRun(ws) {
   const PORT_GAP = Number(process.env.PORT_GAP);
-  // if (
-  //   !relay.subscribers.has(
-  //     `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
-  //   )
-  // ) {
-    relay.subscriber.set(ws, new zmq.Pull());
-    relay.subscribers.add(
-      `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
-    );
-    relay.subscriber
-      .get(ws)
-      .connect(`tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`);
-    console.log(
-      `puller connected to tcp://${ws.publisher.ip}:${
-        ws.publisher.port + PORT_GAP
-      }`
-    );
-    listeningSubscriber(ws);
-  // } else {
-  //   console.log(
-  //     `puller already connected to tcp://${ws.publisher.ip}:${
-  //       ws.publisher.port + PORT_GAP
-  //     }`
-  //   );
-  // }
-  // console.log("여기 오나?");
+
+  relay.subscriber.set(ws, new zmq.Pull());
+  relay.subscribers.add(
+    `tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`
+  );
+  relay.subscriber
+    .get(ws)
+    .connect(`tcp://${ws.publisher.ip}:${ws.publisher.port + PORT_GAP}`);
+  console.log(
+    `puller connected to tcp://${ws.publisher.ip}:${
+      ws.publisher.port + PORT_GAP
+    }`
+  );
+  listeningSubscriber(ws);
 }
 async function listeningSubscriber(sock) {
   for await (const [msg] of relay.subscriber.get(sock)) {
-    // console.log("work: ", msg);
     const decoded = decoder.decode(msg);
     console.log("decoded", decoded);
     const lastIndex = decoded.lastIndexOf("}{");
@@ -504,7 +311,6 @@ async function listeningSubscriber(sock) {
         // dev.alias("relay에서 받음").log(row);
         if (row.type === "players") {
           console.log("net tcp player");
-          // console.log(row.target);
           try {
             for (let ws of socketsSet.keys()) {
               if (row.target !== `${ws.space.pk}-${ws.channel.pk}`) {
@@ -516,16 +322,6 @@ async function listeningSubscriber(sock) {
           } catch (e) {
             // console.log(e);
           }
-          // TODO: pm2 사용할 때만 활성화
-          // process.send({
-          //   type: "process:msg",
-          //   data: {
-          //     success: true,
-          //     type: row.type,
-          //     target: row.target,
-          //     players: row.players,
-          //   },
-          // });
           publishData({
             success: true,
             type: row.type,
@@ -544,17 +340,6 @@ async function listeningSubscriber(sock) {
           } catch (e) {
             // console.log(e);
           }
-          // TODO: pm2 사용할 때만 활성화
-          // process.send({
-          //   type: "process:msg",
-          //   data: {
-          //     success: true,
-          //     type: row.type,
-          //     target: row.target,
-          //     pk: row.locationJson.id,
-          //     locationJson: row.locationJson,
-          //   },
-          // });
           publishData({
             success: true,
             type: row.type,
@@ -563,17 +348,6 @@ async function listeningSubscriber(sock) {
             locationJson: row.locationJson,
           });
         } else if (row.type === "logout") {
-          // dev.log("여긴 와라 좀");
-          // TODO: pm2 사용할 때만 활성화
-          // process.send({
-          //   type: "process:msg",
-          //   data: {
-          //     success: true,
-          //     type: row.type,
-          //     target: row.target,
-          //     players: row.players,
-          //   },
-          // });
           publishData({
             success: true,
             type: row.type,
@@ -587,8 +361,3 @@ async function listeningSubscriber(sock) {
     }
   }
 }
-// listeningSubscriber();
-
-// async function sendMessage(ws, message) {
-//   relay.client.write(message);
-// }

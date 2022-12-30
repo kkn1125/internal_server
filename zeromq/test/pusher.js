@@ -1,5 +1,5 @@
-const zmq = require("zeromq");
-const net = require("net");
+import zmq from "zeromq";
+import net from "net";
 
 const PORT = process.env.PORT;
 

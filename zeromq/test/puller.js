@@ -1,5 +1,7 @@
-const zmq = require("zeromq");
-const net = require("net");
+import zmq from "zeromq";
+import net from "net";
+import PQueue from "p-queue";
+let queue = new PQueue();
 
 const PORT = process.env.PORT;
 const PORT2 = process.env.PORT2;
@@ -17,12 +19,18 @@ function run() {
   });
 }
 
-// setTimeout(() => {
-//   sock.connect(`tcp://127.0.0.1:${PORT}`);
-//   console.log(`Worker connected to port ${PORT}`);
-//   sock.connect(`tcp://127.0.0.1:${PORT2}`);
-//   console.log(`Worker connected to port ${PORT2}`);
-// }, 2000);
+setTimeout(() => {
+  sock.connect(`tcp://127.0.0.1:${PORT}`);
+  console.log(`Worker connected to port ${PORT}`);
+  sock.connect(`tcp://127.0.0.1:${PORT2}`);
+  console.log(`Worker connected to port ${PORT2}`);
+  setInterval(() => {
+    // const queue = new PQueue({ concurrency: 1 });
+    if (queue) {
+      queue.add();
+    }
+  }, 1000);
+}, 2000);
 
 setTimeout(() => {
   run();

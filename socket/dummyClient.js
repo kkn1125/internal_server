@@ -58,7 +58,9 @@ function connectSocket(connectionData, i) {
     allocation,
     user,
   } = connectionData;
-  const q = encodeURI(JSON.stringify(connectionData).trim());
+  const q = encodeURI(JSON.stringify({
+    uuid: connectionData.user.uuid
+  }).trim());
   const ws = new WebSocket(`ws://${socket.ip}:${socket.port}/?q=${q}`);
   // const socket = new WebSocket(
   //   `ws://${
@@ -113,8 +115,8 @@ function connectSocket(connectionData, i) {
             ).finish()
           );
         }, 16);
-      }, 2000);
-    }, 2000);
+      }, 5000);
+    }, 5000);
   };
   ws.onmessage = function (message) {
     const { data } = message;

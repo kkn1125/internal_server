@@ -1,6 +1,23 @@
 version: "3.8"
 
 services:
+  fst:
+    image: tianon/true
+    container_name: first_server
+    depends_on:
+      - back
+      - front
+      - socket
+      - publisher
+  scnd:
+    image: tianon/true
+    container_name: second_server
+    depends_on:
+      - back2
+      - front2
+      - socket2
+      - publisher2
+
   back:
     image: node:lts
     command: nodemon index.js
@@ -48,7 +65,8 @@ services:
 
   socket:
     image: node:lts
-    command: nodemon index.js
+    # command: nodemon index.js
+    command: nodemon relay.js
     container_name: socket
     build:
       context: .
@@ -78,13 +96,13 @@ services:
     container_name: publisher
     build:
       context: .
-      dockerfile: ./zeromq/Dockerfile
+      dockerfile: ./relay/Dockerfile
     ports:
       - 20000:20000
       - 40000:40000
     working_dir: /home/
     volumes:
-      - ./zeromq/:/home
+      - ./relay/:/home
       # - /home/node_modules/
     environment:
       HOST: 0.0.0.0
@@ -146,7 +164,8 @@ services:
 
   socket2:
     image: node:lts
-    command: nodemon index.js
+    # command: nodemon index.js
+    command: nodemon relay.js
     container_name: socket2
     build:
       context: .
@@ -176,13 +195,13 @@ services:
     container_name: publisher2
     build:
       context: .
-      dockerfile: ./zeromq/Dockerfile
+      dockerfile: ./relay/Dockerfile
     ports:
       - 20001:20001
       - 40001:40001
     working_dir: /home/
     volumes:
-      - ./zeromq/:/home
+      - ./relay/:/home
       # - /home/node_modules/
     environment:
       HOST: 0.0.0.0

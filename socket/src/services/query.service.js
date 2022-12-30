@@ -5,7 +5,7 @@ const Query = require("../models/Query.js");
 Query.updateLocation = async (req, res, next) => {
   try {
     const { pox, poy, poz, roy, pk, channel, space } = req;
-    console.log(req);
+    // console.log(req);
     const [result] = await sql.promise().query(
       `UPDATE locations
       SET pox=?, poy=?, poz=?, roy=?

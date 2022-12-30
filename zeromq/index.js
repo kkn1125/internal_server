@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const path = require("path");
 const queryService = require("./src/services/query.service");
 const { dev } = require("./src/utils/tools");
+const PQueue = require("p-queue");
 
 const mode = process.env.NODE_ENV;
 const MODE = process.env.MODE;

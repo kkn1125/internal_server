@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "app",
-      script: "index.js",
+      script: "relay.js",
       watch: ["."],
       // node_args: "-r esm",
       instances: "6",

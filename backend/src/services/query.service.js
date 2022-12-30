@@ -464,7 +464,6 @@ Query.attach = async (req, res, next) => {
     /* copy user request data */
     dataMap.user = Object.assign(dataMap.user || {}, {
       uuid: data.uuid,
-      email: data.email,
     });
 
     const [region] = await sql.promise().query(
