@@ -33,6 +33,8 @@ Field.d(5, "float", "required")(Message.prototype, "roy");
 // Field.d(6, "float", "required")(Message.prototype, "poz");
 // Field.d(7, "float", "required")(Message.prototype, "roy");
 
+const API_HOST = process.env.API_HOST;
+const API_PORT = process.env.API_PORT;
 const amount = 50;
 const start = 0;
 const end = amount - start;
@@ -58,9 +60,11 @@ function connectSocket(connectionData, i) {
     allocation,
     user,
   } = connectionData;
-  const q = encodeURI(JSON.stringify({
-    uuid: connectionData.user.uuid
-  }).trim());
+  const q = encodeURI(
+    JSON.stringify({
+      uuid: user.uuid,
+    }).trim()
+  );
   const ws = new WebSocket(`ws://${socket.ip}:${socket.port}/?q=${q}`);
   // const socket = new WebSocket(
   //   `ws://${
@@ -142,9 +146,7 @@ function attaching(number) {
     const uuid = v4();
     // setTimeout(() => {
     axios
-      .post(`http://192.168.88.234:3001/query/attach`, {
-        uuid: uuid,
-        email: "",
+      .post(`http://${API_HOST}:${API_PORT}/query/attach`, {
         locale: "ko-kr",
       })
       .then((result) => {

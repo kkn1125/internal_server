@@ -4,4 +4,4 @@
 
 rsync -rv --exclude=**/node_modules/ --exclude=./copytorepo ./* ../../project/medience/socket/
 
-sshpass -p 'ander1234!' rsync -rv --exclude=**/node_modules/ --exclude=./copytorepo ./* root@192.168.88.232:/home/test/
+# sshpass -p 'ander1234!' rsync -rv --exclude=**/node_modules/ --exclude=./copytorepo ./* root@192.168.88.232:/home/test/

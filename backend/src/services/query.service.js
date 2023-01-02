@@ -1,42 +1,7 @@
 import { convertRegionName, dev } from "../utils/tools.js";
 import { sql } from "../database/mariadb.js";
 import Query from "../models/Query.js";
-import dotenv from "dotenv";
-import path from "path";
-
-const __dirname = path.resolve();
-const mode = process.env.NODE_ENV;
-const MODE = process.env.MODE;
-
-if (mode === "development") {
-  dotenv.config({
-    path: path.join(__dirname, `.env`),
-  });
-  dotenv.config({
-    path: path.join(__dirname, `.env.${mode}.${MODE}`),
-  });
-}
-
-const options = {
-  cpu_usage: 80,
-  memory_usage: 80,
-  ip: {
-    socket: process.env.SOCKET_HOST || "192.168.88.234",
-    publisher: process.env.PUBLISHER_HOST || "192.168.88.234",
-  },
-  port: {
-    socket: 10000,
-    publisher: 20000,
-  },
-  limit: {
-    locales: 1000,
-    pool_sockets: 2,
-    pool_publishers: 2,
-    spaces: 5,
-    channels: 50,
-    users: 50,
-  },
-};
+import serverConf from "../../configuration/server.conf.js";
 
 const playersQueries = `SELECT 
   users.id,
@@ -86,9 +51,6 @@ async function autoInsertUser(data, locale, dataMap) {
       VALUES (?, ?, ?, ?)`,
       [data.uuid, "", "", `guest${userPk}`]
     );
-    // dev.alias("User Insert Id").log(createUser.insertId);
-    console.log(userPk);
-    console.log(createUser.insertId);
     dataMap.user = Object.assign(dataMap.user || {}, {
       pk: createUser.insertId,
       uuid: data.uuid,
@@ -99,24 +61,25 @@ async function autoInsertUser(data, locale, dataMap) {
 
     /* 풀 소켓, 퍼블리셔 존재 여부 조회 시작 */
     const [isExistsSocket] = await sql.promise().query(
-      `SELECT
-      pool_sockets.*,
-      COUNT(*) AS count,
-      COUNT(*) >= pool_sockets.limit_amount AS is_full
-    FROM pool_sockets
-    LEFT JOIN connection
-    ON pool_sockets.id = connection.socket_id
-    LEFT JOIN users
-    ON connection.user_id = users.id
-    WHERE connection.user_id = users.id
-    GROUP BY connection.socket_id`
+      `SELECT 
+        pool_sockets.id,
+        pool_sockets.ip,
+        pool_sockets.port,
+        pool_sockets.limit_amount,
+        COUNT(*) AS count,
+        COUNT(*) >= pool_sockets.limit_amount AS is_full
+      FROM
+        pool_sockets
+          LEFT JOIN
+        connection ON pool_sockets.id = connection.socket_id
+      GROUP BY pool_sockets.id`
     );
-
     for (let i = 0; i < isExistsSocket.length; i++) {
       const socket = isExistsSocket[i];
       if (socket.limit_amount > socket.count) {
         observers.socket.is_full = false;
         observers.socket.target = socket.id;
+        console.log("소켓이 여유가 있다", socket.port);
         dataMap.socket = Object.assign(dataMap.socket || {}, {
           pk: socket.id,
           ip: socket.ip,
@@ -125,19 +88,14 @@ async function autoInsertUser(data, locale, dataMap) {
         break;
       }
     }
-
     if (observers.socket.is_full) {
       dev
         .alias("socket create")
         .log((isExistsSocket[isExistsSocket.length - 1]?.id || 0) + 1);
-      const [readSocket] = await sql
-        .promise()
-        .query(`SHOW TABLE STATUS WHERE name = 'pool_sockets'`);
-      const socketPk = readSocket[0].Auto_increment;
       const [sockets] = await sql
         .promise()
         .query(`SELECT port FROM pool_sockets`);
-      let portCompare = options.port.socket;
+      let portCompare = serverConf.port.socket;
       for (let i = 0; i < sockets.length - 1; i++) {
         const prevSock = sockets[i];
         const nextSock = sockets[i];
@@ -146,8 +104,9 @@ async function autoInsertUser(data, locale, dataMap) {
           break;
         }
       }
-      if (portCompare === options.port.socket && sockets.length !== 0) {
+      if (portCompare === serverConf.port.socket && sockets.length !== 0) {
         portCompare = sockets.slice(-1)[0].port + 1;
+        console.log("빈 소켓이 중간에 있다", sockets.slice(-1)[0].port + 1);
       }
 
       await sql.promise().query(
@@ -155,61 +114,60 @@ async function autoInsertUser(data, locale, dataMap) {
       (ip, port, cpu_usage, memory_usage, is_live, limit_amount)
       VALUES (?, ?, ?, ?, ?, ?)`,
         [
-          options.ip.socket,
+          serverConf.ip.socket,
           portCompare,
-          options.cpu_usage,
-          options.memory_usage,
+          serverConf.cpu_usage,
+          serverConf.memory_usage,
           true,
-          options.limit.pool_sockets,
+          serverConf.limit.pool_sockets,
         ]
       );
       observers.socket.target =
         (isExistsSocket[isExistsSocket.length - 1]?.id || 0) + 1;
       dataMap.socket = Object.assign(dataMap.socket || {}, {
         pk: (isExistsSocket[isExistsSocket.length - 1]?.id || 0) + 1,
-        ip: options.ip.socket,
+        ip: serverConf.ip.socket,
         port: portCompare,
       });
     }
 
     const [isExistsPublisher] = await sql.promise().query(
-      `SELECT
-        pool_publishers.*,
+      `SELECT 
+        pool_publishers.id,
+        pool_publishers.ip,
+        pool_publishers.port,
+        pool_publishers.limit_amount,
         COUNT(*) AS count,
         COUNT(*) >= pool_publishers.limit_amount AS is_full
-      FROM pool_publishers
-      LEFT JOIN connection
-      ON pool_publishers.id = connection.publisher_id
-      LEFT JOIN users
-      ON connection.user_id = users.id
-      WHERE connection.user_id = users.id
-      GROUP BY connection.publisher_id`
+      FROM
+        pool_publishers
+          LEFT JOIN
+        connection ON pool_publishers.id = connection.publisher_id
+      GROUP BY pool_publishers.id`
     );
-
     for (let i = 0; i < isExistsPublisher.length; i++) {
       const publisher = isExistsPublisher[i];
       if (publisher.limit_amount > publisher.count) {
         observers.publisher.is_full = false;
         observers.publisher.target = publisher.id;
+        console.log("퍼블리셔가 여유가 있다", publisher.port);
         dataMap.publisher = Object.assign(dataMap.publisher || {}, {
           pk: publisher.id,
           ip: publisher.ip,
           port: publisher.port,
         });
+        break;
       }
     }
 
     if (observers.publisher.is_full) {
-      dev
-        .alias("publisher create")
-        .log((isExistsPublisher[isExistsPublisher.length - 1]?.id || 0) + 1);
-      const [readPublisher] = await sql
-        .promise()
-        .query(`SHOW TABLE STATUS WHERE name = 'pool_publishers'`);
+      // dev
+      //   .alias("publisher create")
+      //   .log((isExistsPublisher[isExistsPublisher.length - 1]?.id || 0) + 1);
       const [publishers] = await sql
         .promise()
         .query(`SELECT port FROM pool_publishers`);
-      let portCompare = options.port.publisher;
+      let portCompare = serverConf.port.publisher;
       for (let i = 0; i < publishers.length - 1; i++) {
         const prevPub = publishers[i];
         const nextPub = publishers[i];
@@ -218,42 +176,54 @@ async function autoInsertUser(data, locale, dataMap) {
           break;
         }
       }
-      if (portCompare === options.port.publisher && publishers.length !== 0) {
+      if (
+        portCompare === serverConf.port.publisher &&
+        publishers.length !== 0
+      ) {
         portCompare = publishers.slice(-1)[0].port + 1;
+        console.log(
+          "빈 퍼블리셔가 중간에 있다",
+          publishers.slice(-1)[0].port + 1
+        );
       }
       // const publisherPk = readPublisher[0].Auto_increment;
       await sql.promise().query(
         `INSERT INTO pool_publishers
         (ip, port, is_live, limit_amount)
         VALUES (?, ?, ?, ?)`,
-        [options.ip.publisher, portCompare, true, options.limit.pool_publishers]
+        [
+          serverConf.ip.publisher,
+          portCompare,
+          true,
+          serverConf.limit.pool_publishers,
+        ]
       );
       observers.publisher.target =
         (isExistsPublisher[isExistsPublisher.length - 1]?.id || 0) + 1;
       dataMap.publisher = Object.assign(dataMap.publisher || {}, {
         pk: (isExistsPublisher[isExistsPublisher.length - 1]?.id || 0) + 1,
-        ip: options.ip.publisher,
+        ip: serverConf.ip.publisher,
         port: portCompare,
       });
     }
     /* 풀 소켓, 퍼블리셔 존재 여부 조회 끝 */
 
     /* 비어있는 풀 소켓, 퍼블리셔 조회 시작 */
-    // TODO: 여기 고쳐야 함 - 빈 소켓, 퍼블 찾아서
+    // [x]: 여기 고쳐야 함 - 빈 소켓, 퍼블 찾아서
     const [findEmptyPool] = await sql.promise().query(
       `SELECT
-      DISTINCT(socket_id),
-      publisher_id,
-      COUNT(publisher_id) AS free
-    FROM connection
-    GROUP BY socket_id, publisher_id`
+        DISTINCT(socket_id),
+        publisher_id,
+        COUNT(publisher_id) AS free
+      FROM connection
+      GROUP BY socket_id, publisher_id`
     );
 
     let isEmptyPool = false;
 
     for (let i = 0; i < findEmptyPool.length; i++) {
       const connection = findEmptyPool[i];
-      if (connection.free < options.limit.locales) {
+      if (connection.free < serverConf.limit.locales) {
         await sql.promise().query(
           `INSERT INTO connection
         (socket_id, publisher_id, locale_id, user_id, connected)
@@ -302,40 +272,40 @@ async function autoInsertUser(data, locale, dataMap) {
 
     /* 채널, 공간 존재 여부 조회 시작 */
     const [readChannel] = await sql.promise().query(`
-    SHOW TABLE STATUS WHERE name = 'channels'
-  `);
+      SHOW TABLE STATUS WHERE name = 'channels'
+    `);
     const channelIncrement = readChannel[0].Auto_increment;
     const [isExistsChannel] = await sql.promise().query(
       `SELECT 
-      channels.*,
-      COUNT(*) AS count,
-      COUNT(*) >= channels.limit_amount AS is_full
-    FROM
-      channels
-        LEFT JOIN
-      allocation ON channels.id = allocation.channel_id
-        LEFT JOIN
-      users ON allocation.user_id = users.id
-    WHERE
-      allocation.user_id = users.id
-    GROUP BY
-      channels.id`
+        channels.*,
+        COUNT(*) AS count,
+        COUNT(*) >= channels.limit_amount AS is_full
+      FROM
+        channels
+          LEFT JOIN
+        allocation ON channels.id = allocation.channel_id
+          LEFT JOIN
+        users ON allocation.user_id = users.id
+      WHERE
+        allocation.user_id = users.id
+      GROUP BY
+        channels.id`
     );
 
     const [isExistsSpace] = await sql.promise().query(
       `SELECT
-      spaces.*,
-      channels.limit_amount as c_limit,
-      space_id AS id,
-      COUNT(DISTINCT(channel_id)) AS count,
-      COUNT(user_id) AS user_count
-    FROM allocation
-    LEFT JOIN spaces
-    ON spaces.id = allocation.space_id
-    LEFT JOIN channels
-    ON channels.id = allocation.channel_id
-    GROUP BY space_id
-    ORDER BY space_id`
+        spaces.*,
+        channels.limit_amount as c_limit,
+        space_id AS id,
+        COUNT(DISTINCT(channel_id)) AS count,
+        COUNT(user_id) AS user_count
+      FROM allocation
+      LEFT JOIN spaces
+      ON spaces.id = allocation.space_id
+      LEFT JOIN channels
+      ON channels.id = allocation.channel_id
+      GROUP BY space_id
+      ORDER BY space_id`
     );
 
     for (let i = 0; i < isExistsChannel.length; i++) {
@@ -353,15 +323,15 @@ async function autoInsertUser(data, locale, dataMap) {
       dev.alias("channel create").log(channelIncrement || 0);
       await sql.promise().query(
         `INSERT INTO channels
-      (name, limit_amount)
-      VALUES (?, ?)`,
-        [`channel${channelIncrement || 0}`, options.limit.channels]
+          (name, limit_amount)
+        VALUES (?, ?)`,
+        [`channel${channelIncrement || 0}`, serverConf.limit.channels]
       );
       observers.channel.target = channelIncrement || 0;
       dataMap.channel = Object.assign(dataMap.channel || {}, {
         pk: channelIncrement || 0,
         name: `channel${channelIncrement || 0}`,
-        limit_amount: options.limit.channels,
+        limit_amount: serverConf.limit.channels,
       });
     }
 
@@ -381,18 +351,18 @@ async function autoInsertUser(data, locale, dataMap) {
     }
 
     if (observers.space.is_full) {
-      dev
-        .alias("space create")
-        .log((isExistsSpace[isExistsSpace.length - 1]?.id || 0) + 1);
+      // dev
+      //   .alias("space create")
+      //   .log((isExistsSpace[isExistsSpace.length - 1]?.id || 0) + 1);
       await sql.promise().query(
         `INSERT INTO spaces
-      (name, volume, owner, limit_amount)
-      VALUES (?, ?, ?, ?)`,
+          (name, volume, owner, limit_amount)
+        VALUES (?, ?, ?, ?)`,
         [
           `space${(isExistsSpace[isExistsSpace.length - 1]?.id || 0) + 1}`,
           0,
           "admin",
-          options.limit.spaces,
+          serverConf.limit.spaces,
         ]
       );
       observers.space.target =
@@ -400,7 +370,7 @@ async function autoInsertUser(data, locale, dataMap) {
       dataMap.space = Object.assign(dataMap.space || {}, {
         pk: (isExistsSpace[isExistsSpace.length - 1]?.id || 0) + 1,
         name: `space${(isExistsSpace[isExistsSpace.length - 1]?.id || 0) + 1}`,
-        limit_amount: options.limit.spaces,
+        limit_amount: serverConf.limit.spaces,
       });
     }
 
@@ -416,7 +386,7 @@ async function autoInsertUser(data, locale, dataMap) {
 
     for (let i = 0; i < findEmpty.length; i++) {
       const alloc = findEmpty[i];
-      if (alloc.free < options.limit.channels) {
+      if (alloc.free < serverConf.limit.channels) {
         await sql.promise().query(
           `INSERT INTO allocation
         (space_id, channel_id, user_id, type)
@@ -467,21 +437,21 @@ Query.attach = async (req, res, next) => {
     });
 
     const [region] = await sql.promise().query(
-      `SELECT 
+      `SELECT
         locales.*,
         COUNT(DISTINCT (pool_sockets.id)) AS socket_count,
         COUNT(users.id) AS user_count
-    FROM
+      FROM
         locales
-            LEFT JOIN
+          LEFT JOIN
         connection ON locales.id = connection.locale_id
-            LEFT JOIN
+          LEFT JOIN
         pool_sockets ON connection.socket_id = pool_sockets.id
-            LEFT JOIN
+          LEFT JOIN
         users ON users.id = connection.user_id
-    WHERE
+      WHERE
         locales.region LIKE '${convertRegionName(data.locale)}%'
-    GROUP BY locales.id`
+      GROUP BY locales.id`
     );
     let target = null;
     let is_full = true;
@@ -511,7 +481,7 @@ Query.attach = async (req, res, next) => {
         [
           convertRegionName(data.locale) +
             ((region[region.length - 1]?.id || 0) + 1),
-          options.limit.locales,
+          serverConf.limit.locales,
         ]
       );
       target = (region[region.length - 1]?.id || 0) + 1;
@@ -520,7 +490,7 @@ Query.attach = async (req, res, next) => {
         region:
           convertRegionName(data.locale) +
           ((region[region.length - 1]?.id || 0) + 1),
-        limit_amount: options.limit.locales,
+        limit_amount: serverConf.limit.locales,
       });
     }
 
@@ -565,7 +535,6 @@ Query.login = async (req, res, next) => {
   try {
     const data = req.body;
     const { pk, nickname, password, pox, poy, poz, roy } = data;
-    // console.log(pk);
     const [allocationInfo] = await sql.promise().query(
       `SELECT 
     space_id, channel_id
@@ -585,6 +554,7 @@ Query.login = async (req, res, next) => {
       [nickname, password, pk]
     );
 
+    // 사용자 채널 연결을 위함
     await sql.promise().query(
       `UPDATE allocation
     SET type='player'
@@ -592,6 +562,7 @@ Query.login = async (req, res, next) => {
       [pk, space_id, channel_id]
     );
 
+    // 사용자 초기 위치 값 저장
     await sql.promise().query(
       `INSERT INTO locations (space_id, channel_id, user_id, pox, poy, poz, roy)
     VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -604,8 +575,6 @@ Query.login = async (req, res, next) => {
         `SELECT * FROM locations LEFT JOIN users ON users.id = locations.user_id WHERE users.id = ?`,
         [pk]
       );
-    // console.log("login players", readPlayers);
-    // const data = await sql.promise().query(`SELECT 1`);
     res.status(200).json({
       ok: true,
       pk: pk,
@@ -640,7 +609,6 @@ Query.logout = async (req, res, next) => {
               userInfo[0].space_id,
               userInfo[0].channel_id,
             ]);
-    // const data = await sql.promise().query(`SELECT 1`);
     console.log("logout players", readPlayers);
     res.status(200).json({
       ok: true,
@@ -668,21 +636,8 @@ Query.updateLocation = async (req, res, next) => {
       [pox, poy, poz, roy, pk, channel, space]
     );
 
-    // const [userInfo] = await sql.promise().query(
-    //   `SELECT space_id, channel_id, user_id
-    //   FROM allocation
-    //   WHERE user_id = ?`,
-    //   [pk]
-    // );
-
-    // const [readPlayers] =
-    //   userInfo.length === 0
-    //     ? [[]]
-    //     : await sql.promise().query(playersQueries, [space, channel]);
-
     res.status(200).json({
       ok: true,
-      // players: readPlayers,
     });
   } catch (e) {
     res.status(500).json({
@@ -690,31 +645,6 @@ Query.updateLocation = async (req, res, next) => {
     });
   }
 };
-
-// Query.players = async (req, res, next) => {
-//   const data = req.body;
-//   // console.log(data);
-
-//   const [userInfo] = await sql.promise().query(
-//     `SELECT space_id, channel_id, user_id
-//       FROM allocation
-//       WHERE user_id = (
-//         SELECT id
-//         FROM users
-//         WHERE uuid = ?
-//       )`,
-//     [data.uuid]
-//   );
-
-//   const [readPlayers] = await sql
-//     .promise()
-//     .query(playersQueries, [userInfo[0].space_id, userInfo[0].channel_id]);
-
-//   res.status(200).json({
-//     ok: true,
-//     players: readPlayers,
-//   });
-// };
 
 /* 로깅용 */
 Query.findLocales = async (req, res, next) => {

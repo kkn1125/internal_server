@@ -74,6 +74,23 @@ window.addEventListener("click", (e) => {
   }
 });
 
+window.addEventListener("click", (e) => {
+  const target = e.target;
+  if (target.id !== "guest") return;
+
+  sockets.get(attachUserData.user.uuid).send(
+    JSON.stringify({
+      type: "login",
+      // pk: attachUserData.user.pk,
+      pox: app.width / 2 - SIZE.user.x / 2,
+      poy: app.height / 2 - SIZE.user.y / 2,
+      poz: 0,
+      roy: (Math.PI / 180) * 90,
+    })
+  );
+  document.querySelector(".login-window").remove();
+});
+
 window.addEventListener("load", () => {
   axios
     .post(`http://${host}:${port}/query/attach`, {

@@ -1,0 +1,54 @@
+version: "3.8"
+
+services:
+  dummy1:
+    image: node:lts
+    command: nodemon dummyClient.js
+    container_name: dummy1
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 13001:13001
+    working_dir: /home/
+    volumes:
+      - ./:/home
+      # - /home/node_modules/
+    environment:
+      NODE_ENV: production
+      API_HOST: localhost
+      API_PORT: 3000
+
+  dummy2:
+    image: node:lts
+    command: nodemon dummyClient.js
+    container_name: dummy2
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 13002:13002
+    working_dir: /home/
+    volumes:
+      - ./:/home
+      # - /home/node_modules/
+    environment:
+      NODE_ENV: production
+      API_PORT: 3002
+
+  dummy3:
+    image: node:lts
+    command: nodemon dummyClient.js
+    container_name: dummy3
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 13003:13003
+    working_dir: /home/
+    volumes:
+      - ./:/home
+      # - /home/node_modules/
+    environment:
+      NODE_ENV: production
+      API_PORT: 3003

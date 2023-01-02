@@ -1,140 +1,40 @@
-const zmq = require("zeromq");
-const dotenv = require("dotenv");
-const path = require("path");
 const net = require("net");
 const queryService = require("./src/services/query.service");
 const { dev } = require("./src/utils/tools");
 const { exec } = require("child_process");
+const {
+  SERVER_PORT,
+  SERVER_HOST,
+  PORT_GAP,
+  pushSockets,
+  connectedServer,
+  relay,
+  decoder,
+  IP_ADDRESS,
+} = require("./src/globals/variables");
+const Broker = require("./src/models/Broker");
+const { compareEmptyNetwork } = require("./src/modules/compareAddress");
+const { responseData } = require("./src/modules/responseData");
 
-const mode = process.env.NODE_ENV;
-const MODE = process.env.MODE;
-
-if (mode === "development") {
-  dotenv.config({
-    path: path.join(__dirname, ".env"),
-  });
-
-  dotenv.config({
-    path: path.join(__dirname, `.env.${mode}.${MODE}`),
-  });
-}
-
-/* server ip, port */
-const SERVER_HOST = process.env.SERVER_HOST;
-const SERVER_PORT = Number(process.env.SERVER_PORT);
-const PORT_GAP = Number(process.env.PORT_GAP);
-const IP_ADDRESS = process.env.IP_ADDRESS;
-const connectedServer = new Map();
-
-const relay = {
-  server: null,
-  pusher: null,
-  puller: new Map(),
-};
-
-const decoder = new TextDecoder();
-
-let temp = null;
-let serverSocket = null;
-
-let pushSockets = [];
-let clientSockets = [];
-
+// 퍼블리셔(메인) 서버 실행, 클라이언트 수신만 함
+// 클라이언트 측 송신용 소켓과 퍼블리셔 바인딩
+// 브로커 또한 퍼블리셔 바인딩 (퍼블리셔 간 전파를 위함)
 function createServer() {
+  let temp;
   relay.server = new net.Server((socket) => {
-    let temp;
     socket.setMaxListeners(5000);
-    // pushSockets.push(socket);
     socket.on("connect", () => {
       console.log(socket.address().address + "connected");
     });
     socket.on("data", (data) => {
-      console.log("data", data);
       temp = data;
-      const flag = decoder.decode(data.slice(0, 6));
-      console.log("flag", flag);
-
-      if (flag === "server") {
-        try {
-          for (let i = 0; i < pushSockets.length; i++) {
-            const tcp = pushSockets[i];
-            tcp.write(data.slice(6));
-          }
-        } catch (e) {
-          console.log("from server cli", e);
-        }
-      } else {
-        try {
-          for (let i = 0; i < pushSockets.length; i++) {
-            const tcp = pushSockets[i];
-            tcp.write(data);
-          }
-
-          if (connectedServer.size > 0) {
-            const serverFlag = new TextEncoder().encode("server");
-            const merge = new Uint8Array(
-              serverFlag.byteLength + data.byteLength
-            );
-            merge.set(serverFlag);
-            merge.set(data, serverFlag.byteLength);
-            // console.log("broadcast to relay");
-            for (let i = 0; i < pushSockets.length; i++) {
-              const tcp = pushSockets[i];
-              tcp.write(data);
-            }
-            for (let cli of relay.puller.values()) {
-              cli.write(merge);
-            }
-            // console.log("Received from other relay server: ", result);
-          }
-        } catch (e) {
-          console.log("from server cli", e);
-        }
-      }
+      const flag = decoder.decode(data.subarray(0, 6));
+      responseData(flag, data);
     });
-    socket.on("drain", function (a, b, c) {
-      // console.log(a, b, c);
-      // console.log("drain data", temp);
+    socket.on("drain", function () {
       const flag = decoder.decode(temp.slice(0, 6));
       console.log("drain flag", flag);
-
-      if (flag === "server") {
-        try {
-          for (let i = 0; i < pushSockets.length; i++) {
-            const tcp = pushSockets[i];
-            tcp.write(temp.slice(6));
-          }
-        } catch (e) {
-          console.log("from server cli", e);
-        }
-      } else {
-        try {
-          for (let i = 0; i < pushSockets.length; i++) {
-            const tcp = pushSockets[i];
-            tcp.write(temp);
-          }
-
-          if (connectedServer.size > 0) {
-            const serverFlag = new TextEncoder().encode("server");
-            const merge = new Uint8Array(
-              serverFlag.byteLength + temp.byteLength
-            );
-            merge.set(serverFlag);
-            merge.set(temp, serverFlag.byteLength);
-            // console.log("broadcast to relay");
-            for (let i = 0; i < pushSockets.length; i++) {
-              const tcp = pushSockets[i];
-              tcp.write(temp);
-            }
-            for (let cli of relay.puller.values()) {
-              cli.write(merge);
-            }
-            console.log("Received from other relay server: ", result);
-          }
-        } catch (e) {
-          console.log("from server cli", e);
-        }
-      }
+      responseData(flag, temp);
     });
     socket.on("error", (err) => {
       console.log("socket err", err);
@@ -145,40 +45,23 @@ function createServer() {
   });
   relay.server.listen(SERVER_PORT, SERVER_HOST, () => {
     console.log("server listening on port" + SERVER_PORT);
-    // serverSocket.write("hi im server");
   });
 }
+
+// 퍼블리셔(푸셔) 서버 실행, 소켓/퍼블리셔 간 송신만 힘
+// 클라이언트 측 수신용 소켓과 푸셔 바인딩
 function createPusher() {
-  let temp;
   relay.pusher = new net.Server((socket) => {
     socket.setMaxListeners(5000);
+    //
     pushSockets.push(socket);
     socket.on("connect", () => {
       console.log(socket.address().address + "connected");
     });
     socket.on("data", (data) => {
       console.log("pusher data", data);
-      // temp = data;
-      // const flag = decoder.decode(data.slice(0, 6));
-      // console.log("flag", flag);
-      // if (flag === "server") {
-      //   serverSocket.write(data.slice(6));
-      // } else {
-      //   serverSocket.write(data);
-      //   relay.puller.write(data);
-      // }
     });
-    socket.on("drain", function (a, b, c) {
-      // console.log(a, b, c);
-      // console.log("drain data", temp);
-      const flag = decoder.decode(temp.slice(0, 6));
-      if (flag === "server") {
-        serverSocket.write(temp.slice(6));
-      } else {
-        serverSocket.write(temp);
-        relay.puller.write(temp);
-      }
-    });
+    socket.on("drain", function () {});
     socket.on("error", (err) => {
       console.log("socket err", err);
     });
@@ -188,68 +71,45 @@ function createPusher() {
   });
   relay.pusher.listen(SERVER_PORT + PORT_GAP, SERVER_HOST, () => {
     console.log("pusher listening on port" + (SERVER_PORT + PORT_GAP));
-    // serverSocket.write("hi im server");
-  });
-}
-
-function createPuller(ip, port) {
-  const identity = `${ip}:${port}`;
-
-  relay.puller.set(identity, net.connect({ host: ip, port: port }));
-  relay.puller.get(identity).on("connect", () => {
-    console.log("socket connected");
-  });
-  relay.puller.get(identity).on("data", (data) => {
-    console.log("data", data);
-  });
-  relay.puller.get(identity).on("close", () => {
-    console.log("client closed");
   });
 }
 
 createServer();
 createPusher();
 
-function findKey(ipAddress, list) {
-  for (let i = 0; i < list.length; i++) {
-    const network = `${list[i].ip}:${list[i].port}`;
-    if (network === ipAddress) {
-      return true;
-    }
-  }
-  return false;
+/* auto server connection */
+function createBroker(ip, port) {
+  const key = `${ip}:${port}`;
+  relay.broker.set(key, new Broker(ip, port));
 }
 
-function compareEmptyNetwork(map, list) {
-  for (let key of map.keys()) {
-    if (!findKey(key, list)) {
-      console.log("find delete key:", key);
-      const [ip, port] = key.split(":");
-      relay.client.disconnect(`tcp://${ip}:${port}`);
-      map.delete(key);
-    }
-  }
-}
-
+// 열린 퍼블리셔 서버 자동 연결
 setInterval(() => {
   queryService
     .autoConnectServers()
-    .then(({ publishers, connections }) => {
+    .then((publishers) => {
       if (connectedServer.size > 0 || publishers.length > 0) {
-        compareEmptyNetwork(connectedServer, publishers);
+        const result = compareEmptyNetwork(connectedServer, publishers);
+        if (result) {
+          const [ip, port] = result;
+          const key = `${ip}:${port}`;
+          relay.broker.get(key).disconnect(`tcp://${ip}:${port}`);
+          map.delete(key);
+        }
       }
       for (let i = 0; i < publishers.length; i++) {
         try {
           const pub = publishers[i];
           const { ip, port, limit_amount } = pub;
-          if (IP_ADDRESS !== ip || SERVER_PORT !== port) {
-            if (SERVER_PORT !== port) {
+          const isOtherServer = IP_ADDRESS !== ip || SERVER_PORT !== port;
+          const isOtherPort = SERVER_PORT !== port;
+          if (isOtherServer) {
+            if (isOtherPort) {
               if (!connectedServer.has(`${ip}:${port}`)) {
                 connectedServer.set(`${ip}:${port}`, {});
                 dev.log(`servers ip, port:`, IP_ADDRESS, SERVER_PORT);
                 dev.log(`not exists ip, port:`, ip, port);
-                // addServer(ip, port);
-                createPuller(ip, port);
+                createBroker(ip, port);
               }
             }
           }

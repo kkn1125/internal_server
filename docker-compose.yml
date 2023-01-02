@@ -1,22 +1,22 @@
 version: "3.8"
 
 services:
-  fst:
-    image: tianon/true
-    container_name: first_server
-    depends_on:
-      - back
-      - front
-      - socket
-      - publisher
-  scnd:
-    image: tianon/true
-    container_name: second_server
-    depends_on:
-      - back2
-      - front2
-      - socket2
-      - publisher2
+  # fst:
+  #   image: tianon/true
+  #   container_name: first_server
+  #   depends_on:
+  #     - back
+  #     - front
+  #     - socket
+  #     - publisher
+  # scnd:
+  #   image: tianon/true
+  #   container_name: second_server
+  #   depends_on:
+  #     - back2
+  #     - front2
+  #     - socket2
+  #     - publisher2
 
   back:
     image: node:lts
@@ -66,7 +66,7 @@ services:
   socket:
     image: node:lts
     # command: nodemon index.js
-    command: nodemon relay.js
+    command: nodemon index.js
     container_name: socket
     build:
       context: .
@@ -165,7 +165,7 @@ services:
   socket2:
     image: node:lts
     # command: nodemon index.js
-    command: nodemon relay.js
+    command: nodemon index.js
     container_name: socket2
     build:
       context: .
@@ -207,6 +207,105 @@ services:
       HOST: 0.0.0.0
       SERVER_HOST: 0.0.0.0
       SERVER_PORT: 20001
+      NODE_ENV: production
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      PORT_GAP: 20000
+      IP_ADDRESS: 192.168.88.234
+
+  back3:
+    image: node:lts
+    command: nodemon index.js
+    container_name: back3
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - 3003:3003
+    working_dir: /home/
+    volumes:
+      - ./backend/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3003
+      NODE_ENV: production
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      SOCKET_HOST: 192.168.88.234
+      PUBLISHER_HOST: 192.168.88.234
+
+  front3:
+    image: node:lts
+    command: vite --config vite.config.js
+    container_name: front3
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - 5003:5003
+    working_dir: /home/
+    volumes:
+      - ./frontend/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5003
+      NODE_ENV: production
+      VITE_API_HOST: 192.168.88.234
+      VITE_API_PORT: 3003
+
+  socket3:
+    image: node:lts
+    # command: nodemon index.js
+    command: nodemon index.js
+    container_name: socket3
+    build:
+      context: .
+      dockerfile: ./socket/Dockerfile
+    ports:
+      - 10002:10002
+    working_dir: /home/
+    volumes:
+      - ./socket/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      PORT: 10002
+      NODE_ENV: production
+      MARIADB_PORT: 3307
+      MARIADB_HOST: 192.168.88.234
+      MARIADB_USERNAME: share
+      MARIADB_PW: 1234
+      MARIADB_DATABASE: internal_server
+      API_HOST: 192.168.88.234
+      API_PORT: 3003
+      PORT_GAP: 20000
+
+  publisher3:
+    image: node:lts
+    command: nodemon index.js
+    container_name: publisher3
+    build:
+      context: .
+      dockerfile: ./relay/Dockerfile
+    ports:
+      - 20002:20002
+      - 40002:40002
+    working_dir: /home/
+    volumes:
+      - ./relay/:/home
+      # - /home/node_modules/
+    environment:
+      HOST: 0.0.0.0
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 20002
       NODE_ENV: production
       MARIADB_PORT: 3307
       MARIADB_HOST: 192.168.88.234
