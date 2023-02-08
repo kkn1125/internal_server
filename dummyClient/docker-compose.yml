@@ -16,7 +16,7 @@ services:
       # - /home/node_modules/
     environment:
       NODE_ENV: production
-      API_HOST: localhost
+      API_HOST: 192.168.88.234
       API_PORT: 3000
 
   dummy2:
@@ -34,6 +34,7 @@ services:
       # - /home/node_modules/
     environment:
       NODE_ENV: production
+      API_HOST: 192.168.88.234
       API_PORT: 3002
 
   dummy3:
@@ -51,4 +52,5 @@ services:
       # - /home/node_modules/
     environment:
       NODE_ENV: production
+      API_HOST: 192.168.88.234
       API_PORT: 3003
